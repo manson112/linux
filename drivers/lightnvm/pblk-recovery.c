@@ -85,7 +85,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 	return 0;
 }
 
-static int pblk_calc_sec_in_line(struct pblk *pblk, struct pblk_line *line)
+static int pblk_total_sec_in_line(struct pblk *pblk, struct pblk_line *line)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -94,6 +94,30 @@ static int pblk_calc_sec_in_line(struct pblk *pblk, struct pblk_line *line)
 
 	return lm->sec_per_line - lm->smeta_sec - lm->emeta_sec[0] -
 				nr_bb * geo->clba;
+}
+
+static u64 pblk_sec_in_open_line(struct pblk *pblk, struct pblk_line *line)
+{
+	struct pblk_line_meta *lm = &pblk->lm;
+	int nr_bb = bitmap_weight(line->blk_bitmap, lm->blk_per_line);
+	u64 written_secs = 0;
+	int valid_chunks = 0;
+	int i;
+
+	for (i = 0; i < lm->blk_per_line; i++) {
+		struct nvm_chk_meta *chunk = &line->chks[i];
+
+		if (chunk->state & NVM_CHK_ST_OFFLINE)
+			continue;
+
+		written_secs += chunk->wp;
+		valid_chunks++;
+	}
+
+	if (lm->blk_per_line - nr_bb != valid_chunks)
+		pblk_err(pblk, "recovery line %d is bad\n", line->id);
+
+	return written_secs - lm->smeta_sec;
 }
 
 struct pblk_recov_alloc {
@@ -381,8 +405,8 @@ fail_free_pad:
  * first find the write pointer on the device, then we pad all necessary
  * sectors, and finally attempt to read the valid data
  */
-static int pblk_recov_scan_all_oob(struct pblk *pblk, struct pblk_line *line,
-				   struct pblk_recov_alloc p)
+static int pblk_recov_scan_all_oob_12(struct pblk *pblk, struct pblk_line *line,
+				      struct pblk_recov_alloc p)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -397,7 +421,7 @@ static int pblk_recov_scan_all_oob(struct pblk *pblk, struct pblk_line *line,
 	int i, j;
 	int ret = 0;
 	int rec_round;
-	int left_ppas = pblk_calc_sec_in_line(pblk, line) - line->cur_sec;
+	int left_ppas = pblk_total_sec_in_line(pblk, line) - line->cur_sec;
 
 	ppa_list = p.ppa_list;
 	meta_list = p.meta_list;
@@ -513,8 +537,8 @@ next_rq:
 	return ret;
 }
 
-static int pblk_recov_scan_oob(struct pblk *pblk, struct pblk_line *line,
-			       struct pblk_recov_alloc p, int *done)
+static int pblk_recov_scan_oob_12(struct pblk *pblk, struct pblk_line *line,
+				  struct pblk_recov_alloc p, bool *done)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -527,8 +551,8 @@ static int pblk_recov_scan_oob(struct pblk *pblk, struct pblk_line *line,
 	u64 paddr;
 	int rq_ppas, rq_len;
 	int i, j;
-	int ret = 0;
-	int left_ppas = pblk_calc_sec_in_line(pblk, line);
+	int ret;
+	int left_ppas = pblk_total_sec_in_line(pblk, line);
 
 	ppa_list = p.ppa_list;
 	meta_list = p.meta_list;
@@ -537,7 +561,7 @@ static int pblk_recov_scan_oob(struct pblk *pblk, struct pblk_line *line,
 	dma_ppa_list = p.dma_ppa_list;
 	dma_meta_list = p.dma_meta_list;
 
-	*done = 1;
+	*done = true;
 
 next_rq:
 	memset(rqd, 0, pblk_g_rq_size);
@@ -609,7 +633,7 @@ next_rq:
 		rqd->nr_ppas = bit;
 
 		if (rqd->error != NVM_RSP_ERR_EMPTYPAGE)
-			*done = 0;
+			*done = false;
 	}
 
 	for (i = 0; i < rqd->nr_ppas; i++) {
@@ -625,7 +649,149 @@ next_rq:
 	if (left_ppas > 0)
 		goto next_rq;
 
-	return ret;
+	return 0;
+}
+
+static int pblk_line_wp_is_unbalanced(struct pblk *pblk,
+				      struct pblk_line *line)
+{
+	struct nvm_tgt_dev *dev = pblk->dev;
+	struct nvm_geo *geo = &dev->geo;
+	struct pblk_line_meta *lm = &pblk->lm;
+	struct pblk_lun *rlun;
+	struct nvm_chk_meta *chunk;
+	struct ppa_addr ppa;
+	u64 line_wp;
+	int pos, i;
+
+	rlun = &pblk->luns[0];
+	ppa = rlun->bppa;
+	pos = pblk_ppa_to_pos(geo, ppa);
+	chunk = &line->chks[pos];
+
+	line_wp = chunk->wp;
+
+	for (i = 1; i < lm->blk_per_line; i++) {
+		rlun = &pblk->luns[i];
+		ppa = rlun->bppa;
+		pos = pblk_ppa_to_pos(geo, ppa);
+		chunk = &line->chks[pos];
+
+		if (chunk->wp > line_wp)
+			return 1;
+		else if (chunk->wp < line_wp)
+			line_wp = chunk->wp;
+	}
+
+	return 0;
+}
+
+static int pblk_recov_scan_oob_20(struct pblk *pblk, struct pblk_line *line,
+				  struct pblk_recov_alloc p)
+{
+	struct nvm_tgt_dev *dev = pblk->dev;
+	struct nvm_geo *geo = &dev->geo;
+	struct ppa_addr *ppa_list;
+	struct pblk_sec_meta *meta_list;
+	struct nvm_rq *rqd;
+	struct bio *bio;
+	void *data;
+	dma_addr_t dma_ppa_list, dma_meta_list;
+	__le64 *lba_list;
+	u64 paddr = 0;
+	int rq_ppas, rq_len;
+	int i, j;
+	int ret;
+	u64 left_ppas = pblk_sec_in_open_line(pblk, line);
+
+	if (pblk_line_wp_is_unbalanced(pblk, line))
+		pblk_warn(pblk, "recovering unbalanced line (%d)\n", line->id);
+
+	ppa_list = p.ppa_list;
+	meta_list = p.meta_list;
+	rqd = p.rqd;
+	data = p.data;
+	dma_ppa_list = p.dma_ppa_list;
+	dma_meta_list = p.dma_meta_list;
+
+	lba_list = emeta_to_lbas(pblk, line->emeta->buf);
+
+next_rq:
+	memset(rqd, 0, pblk_g_rq_size);
+
+	rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
+	if (!rq_ppas)
+		rq_ppas = pblk->min_write_pgs;
+	rq_len = rq_ppas * geo->csecs;
+
+	bio = bio_map_kern(dev->q, data, rq_len, GFP_KERNEL);
+	if (IS_ERR(bio))
+		return PTR_ERR(bio);
+
+	bio->bi_iter.bi_sector = 0; /* internal bio */
+	bio_set_op_attrs(bio, REQ_OP_READ, 0);
+
+	rqd->bio = bio;
+	rqd->opcode = NVM_OP_PREAD;
+	rqd->meta_list = meta_list;
+	rqd->nr_ppas = rq_ppas;
+	rqd->ppa_list = ppa_list;
+	rqd->dma_ppa_list = dma_ppa_list;
+	rqd->dma_meta_list = dma_meta_list;
+
+	if (pblk_io_aligned(pblk, rq_ppas))
+		rqd->is_seq = 1;
+
+	for (i = 0; i < rqd->nr_ppas; ) {
+		struct ppa_addr ppa;
+		int pos;
+
+		paddr = pblk_alloc_page(pblk, line, pblk->min_write_pgs);
+		ppa = addr_to_gen_ppa(pblk, paddr, line->id);
+		pos = pblk_ppa_to_pos(geo, ppa);
+
+		while (test_bit(pos, line->blk_bitmap)) {
+			paddr += pblk->min_write_pgs;
+			ppa = addr_to_gen_ppa(pblk, paddr, line->id);
+			pos = pblk_ppa_to_pos(geo, ppa);
+		}
+
+		for (j = 0; j < pblk->min_write_pgs; j++, i++)
+			rqd->ppa_list[i] =
+				addr_to_gen_ppa(pblk, paddr + j, line->id);
+	}
+
+	ret = pblk_submit_io_sync(pblk, rqd);
+	if (ret) {
+		pblk_err(pblk, "I/O submission failed: %d\n", ret);
+		bio_put(bio);
+		return ret;
+	}
+
+	atomic_dec(&pblk->inflight_io);
+
+	if (rqd->error) {
+		pblk_log_read_err(pblk, rqd);
+		return -EINTR;
+	}
+
+	for (i = 0; i < rqd->nr_ppas; i++) {
+		u64 lba = le64_to_cpu(meta_list[i].lba);
+
+		lba_list[paddr++] = cpu_to_le64(lba);
+
+		if (lba == ADDR_EMPTY || lba > pblk->rl.nr_secs)
+			continue;
+
+		line->nr_valid_lbas++;
+		pblk_update_map(pblk, lba, rqd->ppa_list[i]);
+	}
+
+	left_ppas -= rq_ppas;
+	if (left_ppas > 0)
+		goto next_rq;
+
+	return 0;
 }
 
 /* Scan line for lbas on out of bound area */
@@ -639,7 +805,7 @@ static int pblk_recov_l2p_from_oob(struct pblk *pblk, struct pblk_line *line)
 	struct pblk_recov_alloc p;
 	void *data;
 	dma_addr_t dma_ppa_list, dma_meta_list;
-	int done, ret = 0;
+	int ret = 0;
 
 	meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL, &dma_meta_list);
 	if (!meta_list)
@@ -654,7 +820,8 @@ static int pblk_recov_l2p_from_oob(struct pblk *pblk, struct pblk_line *line)
 		goto free_meta_list;
 	}
 
-	rqd = pblk_alloc_rqd(pblk, PBLK_READ);
+	rqd = mempool_alloc(&pblk->r_rq_pool, GFP_KERNEL);
+	memset(rqd, 0, pblk_g_rq_size);
 
 	p.ppa_list = ppa_list;
 	p.meta_list = meta_list;
@@ -663,16 +830,27 @@ static int pblk_recov_l2p_from_oob(struct pblk *pblk, struct pblk_line *line)
 	p.dma_ppa_list = dma_ppa_list;
 	p.dma_meta_list = dma_meta_list;
 
-	ret = pblk_recov_scan_oob(pblk, line, p, &done);
-	if (ret) {
-		pblk_err(pblk, "could not recover L2P from OOB\n");
-		goto out;
-	}
+	if (geo->version == NVM_OCSSD_SPEC_12) {
+		bool recov_done;
 
-	if (!done) {
-		ret = pblk_recov_scan_all_oob(pblk, line, p);
+		ret = pblk_recov_scan_oob_12(pblk, line, p, &recov_done);
 		if (ret) {
 			pblk_err(pblk, "could not recover L2P from OOB\n");
+			goto out;
+		}
+
+		if (!recov_done) {
+			ret = pblk_recov_scan_all_oob_12(pblk, line, p);
+			if (ret) {
+				pblk_err(pblk,
+					"could not recover L2P from OOB\n");
+				goto out;
+			}
+		}
+	} else {
+		ret = pblk_recov_scan_oob_20(pblk, line, p);
+		if (ret) {
+			pblk_err(pblk, "could not recover L2P form OOB\n");
 			goto out;
 		}
 	}
@@ -681,6 +859,7 @@ static int pblk_recov_l2p_from_oob(struct pblk *pblk, struct pblk_line *line)
 		pblk_line_recov_close(pblk, line);
 
 out:
+	mempool_free(rqd, &pblk->r_rq_pool);
 	kfree(data);
 free_meta_list:
 	nvm_dev_dma_free(dev->parent, meta_list, dma_meta_list);
@@ -769,7 +948,7 @@ static void pblk_recov_wa_counters(struct pblk *pblk,
 }
 
 static int pblk_line_was_written(struct pblk_line *line,
-			    struct pblk *pblk)
+				 struct pblk *pblk)
 {
 
 	struct pblk_line_meta *lm = &pblk->lm;
@@ -793,6 +972,18 @@ static int pblk_line_was_written(struct pblk_line *line,
 		return 0;
 
 	return 1;
+}
+
+static bool pblk_line_is_open(struct pblk *pblk, struct pblk_line *line)
+{
+	struct pblk_line_meta *lm = &pblk->lm;
+	int i;
+
+	for (i = 0; i < lm->blk_per_line; i++)
+		if (line->chks[i].state & NVM_CHK_ST_OPEN)
+			return true;
+
+	return false;
 }
 
 struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
@@ -905,6 +1096,11 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 		line->emeta = emeta;
 		memset(line->emeta->buf, 0, lm->emeta_len[0]);
 
+		if (pblk_line_is_open(pblk, line)) {
+			pblk_recov_l2p_from_oob(pblk, line);
+			goto next;
+		}
+
 		if (pblk_line_emeta_read(pblk, line, line->emeta->buf)) {
 			pblk_recov_l2p_from_oob(pblk, line);
 			goto next;
@@ -941,12 +1137,17 @@ next:
 			line->smeta = NULL;
 			line->emeta = NULL;
 		} else {
-			if (open_lines > 1)
-				pblk_err(pblk, "failed to recover L2P\n");
+			spin_lock(&line->lock);
+			line->state = PBLK_LINESTATE_OPEN;
+			spin_unlock(&line->lock);
+
+			line->emeta->mem = 0;
+			atomic_set(&line->emeta->sync, 0);
+
+			data_line = line;
+			line->meta_line = meta_line;
 
 			open_lines++;
-			line->meta_line = meta_line;
-			data_line = line;
 		}
 	}
 
