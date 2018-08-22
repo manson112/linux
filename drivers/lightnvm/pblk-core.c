@@ -21,14 +21,15 @@
 static void pblk_line_mark_bb(struct work_struct *work)
 {
 	struct pblk_line_ws *line_ws = container_of(work, struct pblk_line_ws,
-									ws);
+												ws);
 	struct pblk *pblk = line_ws->pblk;
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct ppa_addr *ppa = line_ws->priv;
 	int ret;
 
 	ret = nvm_set_tgt_bb_tbl(dev, ppa, 1, NVM_BLK_T_GRWN_BAD);
-	if (ret) {
+	if (ret)
+	{
 		struct pblk_line *line;
 		int pos;
 
@@ -36,7 +37,7 @@ static void pblk_line_mark_bb(struct work_struct *work)
 		pos = pblk_ppa_to_pos(&dev->geo, *ppa);
 
 		pr_err("pblk: failed to mark bb, line:%d, pos:%d\n",
-				line->id, pos);
+			   line->id, pos);
 	}
 
 	kfree(ppa);
@@ -44,7 +45,7 @@ static void pblk_line_mark_bb(struct work_struct *work)
 }
 
 static void pblk_mark_bb(struct pblk *pblk, struct pblk_line *line,
-			 struct ppa_addr ppa_addr)
+						 struct ppa_addr ppa_addr)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -57,7 +58,7 @@ static void pblk_mark_bb(struct pblk *pblk, struct pblk_line *line,
 	atomic_dec(&line->blk_in_line);
 	if (test_and_set_bit(pos, line->blk_bitmap))
 		pr_err("pblk: attempted to erase bb: line:%d, pos:%d\n",
-							line->id, pos);
+			   line->id, pos);
 
 	/* Not necessary to mark bad blocks on 2.0 spec. */
 	if (geo->version == NVM_OCSSD_SPEC_20)
@@ -69,7 +70,7 @@ static void pblk_mark_bb(struct pblk *pblk, struct pblk_line *line,
 
 	*ppa = ppa_addr;
 	pblk_gen_run_ws(pblk, NULL, ppa, pblk_line_mark_bb,
-						GFP_ATOMIC, pblk->bb_wq);
+					GFP_ATOMIC, pblk->bb_wq);
 }
 
 static void __pblk_end_io_erase(struct pblk *pblk, struct nvm_rq *rqd)
@@ -86,10 +87,13 @@ static void __pblk_end_io_erase(struct pblk *pblk, struct nvm_rq *rqd)
 
 	atomic_dec(&line->left_seblks);
 
-	if (rqd->error) {
+	if (rqd->error)
+	{
 		chunk->state = NVM_CHK_ST_OFFLINE;
 		pblk_mark_bb(pblk, line, rqd->ppa_addr);
-	} else {
+	}
+	else
+	{
 		chunk->state = NVM_CHK_ST_FREE;
 	}
 
@@ -127,7 +131,8 @@ struct nvm_chk_meta *pblk_chunk_get_info(struct pblk *pblk)
 		return ERR_PTR(-ENOMEM);
 
 	ret = nvm_get_chunk_meta(dev, meta, ppa, geo->all_chunks);
-	if (ret) {
+	if (ret)
+	{
 		kfree(meta);
 		return ERR_PTR(-EIO);
 	}
@@ -136,8 +141,8 @@ struct nvm_chk_meta *pblk_chunk_get_info(struct pblk *pblk)
 }
 
 struct nvm_chk_meta *pblk_chunk_get_off(struct pblk *pblk,
-					      struct nvm_chk_meta *meta,
-					      struct ppa_addr ppa)
+										struct nvm_chk_meta *meta,
+										struct ppa_addr ppa)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -149,7 +154,7 @@ struct nvm_chk_meta *pblk_chunk_get_off(struct pblk *pblk,
 }
 
 void __pblk_map_invalidate(struct pblk *pblk, struct pblk_line *line,
-			   u64 paddr)
+						   u64 paddr)
 {
 	struct pblk_line_mgmt *l_mg = &pblk->l_mg;
 	struct list_head *move_list = NULL;
@@ -161,7 +166,8 @@ void __pblk_map_invalidate(struct pblk *pblk, struct pblk_line *line,
 	spin_lock(&line->lock);
 	WARN_ON(line->state == PBLK_LINESTATE_FREE);
 
-	if (test_and_set_bit(paddr, line->invalid_bitmap)) {
+	if (test_and_set_bit(paddr, line->invalid_bitmap))
+	{
 		WARN_ONCE(1, "pblk: double invalidate\n");
 		spin_unlock(&line->lock);
 		return;
@@ -172,11 +178,13 @@ void __pblk_map_invalidate(struct pblk *pblk, struct pblk_line *line,
 		move_list = pblk_line_gc_list(pblk, line);
 	spin_unlock(&line->lock);
 
-	if (move_list) {
+	if (move_list)
+	{
 		spin_lock(&l_mg->gc_lock);
 		spin_lock(&line->lock);
 		/* Prevent moving a line that has just been chosen for GC */
-		if (line->state == PBLK_LINESTATE_GC) {
+		if (line->state == PBLK_LINESTATE_GC)
+		{
 			spin_unlock(&line->lock);
 			spin_unlock(&l_mg->gc_lock);
 			return;
@@ -208,12 +216,13 @@ void pblk_map_invalidate(struct pblk *pblk, struct ppa_addr ppa)
 }
 
 static void pblk_invalidate_range(struct pblk *pblk, sector_t slba,
-				  unsigned int nr_secs)
+								  unsigned int nr_secs)
 {
 	sector_t lba;
 
 	spin_lock(&pblk->trans_lock);
-	for (lba = slba; lba < slba + nr_secs; lba++) {
+	for (lba = slba; lba < slba + nr_secs; lba++)
+	{
 		struct ppa_addr ppa;
 
 		ppa = pblk_trans_map_get(pblk, lba);
@@ -234,7 +243,8 @@ struct nvm_rq *pblk_alloc_rqd(struct pblk *pblk, int type)
 	struct nvm_rq *rqd;
 	int rq_size;
 
-	switch (type) {
+	switch (type)
+	{
 	case PBLK_WRITE:
 	case PBLK_WRITE_INT:
 		pool = pblk->w_rq_pool;
@@ -261,7 +271,8 @@ void pblk_free_rqd(struct pblk *pblk, struct nvm_rq *rqd, int type)
 	struct nvm_tgt_dev *dev = pblk->dev;
 	mempool_t *pool;
 
-	switch (type) {
+	switch (type)
+	{
 	case PBLK_WRITE:
 		kfree(((struct pblk_c_ctx *)nvm_rq_to_pdu(rqd))->lun_bitmap);
 	case PBLK_WRITE_INT:
@@ -283,31 +294,34 @@ void pblk_free_rqd(struct pblk *pblk, struct nvm_rq *rqd, int type)
 }
 
 void pblk_bio_free_pages(struct pblk *pblk, struct bio *bio, int off,
-			 int nr_pages)
+						 int nr_pages)
 {
 	struct bio_vec bv;
 	int i;
 
 	WARN_ON(off + nr_pages != bio->bi_vcnt);
 
-	for (i = off; i < nr_pages + off; i++) {
+	for (i = off; i < nr_pages + off; i++)
+	{
 		bv = bio->bi_io_vec[i];
 		mempool_free(bv.bv_page, pblk->page_bio_pool);
 	}
 }
 
 int pblk_bio_add_pages(struct pblk *pblk, struct bio *bio, gfp_t flags,
-		       int nr_pages)
+					   int nr_pages)
 {
 	struct request_queue *q = pblk->dev->q;
 	struct page *page;
 	int i, ret;
 
-	for (i = 0; i < nr_pages; i++) {
+	for (i = 0; i < nr_pages; i++)
+	{
 		page = mempool_alloc(pblk->page_bio_pool, flags);
 
 		ret = bio_add_pc_page(q, bio, page, PBLK_EXPOSED_PAGE_SIZE, 0);
-		if (ret != PBLK_EXPOSED_PAGE_SIZE) {
+		if (ret != PBLK_EXPOSED_PAGE_SIZE)
+		{
 			pr_err("pblk: could not add page to bio\n");
 			mempool_free(page, pblk->page_bio_pool);
 			goto err;
@@ -351,7 +365,8 @@ void pblk_end_io_sync(struct nvm_rq *rqd)
 
 static void pblk_wait_for_meta(struct pblk *pblk)
 {
-	do {
+	do
+	{
 		if (!atomic_read(&pblk->inflight_io))
 			break;
 
@@ -362,7 +377,8 @@ static void pblk_wait_for_meta(struct pblk *pblk)
 static void pblk_flush_writer(struct pblk *pblk)
 {
 	pblk_rb_flush(&pblk->rwb);
-	do {
+	do
+	{
 		if (!pblk_rb_sync_count(&pblk->rwb))
 			break;
 
@@ -380,39 +396,55 @@ struct list_head *pblk_line_gc_list(struct pblk *pblk, struct pblk_line *line)
 
 	lockdep_assert_held(&line->lock);
 
-	if (!vsc) {
-		if (line->gc_group != PBLK_LINEGC_FULL) {
+	if (!vsc)
+	{
+		if (line->gc_group != PBLK_LINEGC_FULL)
+		{
 			line->gc_group = PBLK_LINEGC_FULL;
 			move_list = &l_mg->gc_full_list;
 		}
-	} else if (vsc < lm->high_thrs) {
-		if (line->gc_group != PBLK_LINEGC_HIGH) {
+	}
+	else if (vsc < lm->high_thrs)
+	{
+		if (line->gc_group != PBLK_LINEGC_HIGH)
+		{
 			line->gc_group = PBLK_LINEGC_HIGH;
 			move_list = &l_mg->gc_high_list;
 		}
-	} else if (vsc < lm->mid_thrs) {
-		if (line->gc_group != PBLK_LINEGC_MID) {
+	}
+	else if (vsc < lm->mid_thrs)
+	{
+		if (line->gc_group != PBLK_LINEGC_MID)
+		{
 			line->gc_group = PBLK_LINEGC_MID;
 			move_list = &l_mg->gc_mid_list;
 		}
-	} else if (vsc < line->sec_in_line) {
-		if (line->gc_group != PBLK_LINEGC_LOW) {
+	}
+	else if (vsc < line->sec_in_line)
+	{
+		if (line->gc_group != PBLK_LINEGC_LOW)
+		{
 			line->gc_group = PBLK_LINEGC_LOW;
 			move_list = &l_mg->gc_low_list;
 		}
-	} else if (vsc == line->sec_in_line) {
-		if (line->gc_group != PBLK_LINEGC_EMPTY) {
+	}
+	else if (vsc == line->sec_in_line)
+	{
+		if (line->gc_group != PBLK_LINEGC_EMPTY)
+		{
 			line->gc_group = PBLK_LINEGC_EMPTY;
 			move_list = &l_mg->gc_empty_list;
 		}
-	} else {
+	}
+	else
+	{
 		line->state = PBLK_LINESTATE_CORRUPT;
 		line->gc_group = PBLK_LINEGC_NONE;
-		move_list =  &l_mg->corrupt_list;
+		move_list = &l_mg->corrupt_list;
 		pr_err("pblk: corrupted vsc for line %d, vsc:%d (%d/%d/%d)\n",
-						line->id, vsc,
-						line->sec_in_line,
-						lm->high_thrs, lm->mid_thrs);
+			   line->id, vsc,
+			   line->sec_in_line,
+			   lm->high_thrs, lm->mid_thrs);
 	}
 
 	return move_list;
@@ -437,12 +469,14 @@ void pblk_log_write_err(struct pblk *pblk, struct nvm_rq *rqd)
 void pblk_log_read_err(struct pblk *pblk, struct nvm_rq *rqd)
 {
 	/* Empty page read is not necessarily an error (e.g., L2P recovery) */
-	if (rqd->error == NVM_RSP_ERR_EMPTYPAGE) {
+	if (rqd->error == NVM_RSP_ERR_EMPTYPAGE)
+	{
 		atomic_long_inc(&pblk->read_empty);
 		return;
 	}
 
-	switch (rqd->error) {
+	switch (rqd->error)
+	{
 	case NVM_RSP_WARN_HIGHECC:
 		atomic_long_inc(&pblk->read_high_ecc);
 		break;
@@ -503,8 +537,8 @@ static void pblk_bio_map_addr_endio(struct bio *bio)
 }
 
 struct bio *pblk_bio_map_addr(struct pblk *pblk, void *data,
-			      unsigned int nr_secs, unsigned int len,
-			      int alloc_type, gfp_t gfp_mask)
+							  unsigned int nr_secs, unsigned int len,
+							  int alloc_type, gfp_t gfp_mask)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	void *kaddr = data;
@@ -519,9 +553,11 @@ struct bio *pblk_bio_map_addr(struct pblk *pblk, void *data,
 	if (!bio)
 		return ERR_PTR(-ENOMEM);
 
-	for (i = 0; i < nr_secs; i++) {
+	for (i = 0; i < nr_secs; i++)
+	{
 		page = vmalloc_to_page(kaddr);
-		if (!page) {
+		if (!page)
+		{
 			pr_err("pblk: could not map vmalloc bio\n");
 			bio_put(bio);
 			bio = ERR_PTR(-ENOMEM);
@@ -529,7 +565,8 @@ struct bio *pblk_bio_map_addr(struct pblk *pblk, void *data,
 		}
 
 		ret = bio_add_pc_page(dev->q, bio, page, PAGE_SIZE, 0);
-		if (ret != PAGE_SIZE) {
+		if (ret != PAGE_SIZE)
+		{
 			pr_err("pblk: could not add page to bio\n");
 			bio_put(bio);
 			bio = ERR_PTR(-ENOMEM);
@@ -545,7 +582,7 @@ out:
 }
 
 int pblk_calc_secs(struct pblk *pblk, unsigned long secs_avail,
-		   unsigned long secs_to_flush)
+				   unsigned long secs_to_flush)
 {
 	int max = pblk->sec_per_write;
 	int min = pblk->min_write_pgs;
@@ -568,7 +605,7 @@ void pblk_dealloc_page(struct pblk *pblk, struct pblk_line *line, int nr_secs)
 
 	spin_lock(&line->lock);
 	addr = find_next_zero_bit(line->map_bitmap,
-					pblk->lm.sec_per_line, line->cur_sec);
+							  pblk->lm.sec_per_line, line->cur_sec);
 	line->cur_sec = addr - nr_secs;
 
 	for (i = 0; i < nr_secs; i++, line->cur_sec--)
@@ -584,13 +621,14 @@ u64 __pblk_alloc_page(struct pblk *pblk, struct pblk_line *line, int nr_secs)
 	lockdep_assert_held(&line->lock);
 
 	/* logic error: ppa out-of-bounds. Prevent generating bad address */
-	if (line->cur_sec + nr_secs > pblk->lm.sec_per_line) {
+	if (line->cur_sec + nr_secs > pblk->lm.sec_per_line)
+	{
 		WARN(1, "pblk: page allocation out of bounds\n");
 		nr_secs = pblk->lm.sec_per_line - line->cur_sec;
 	}
 
 	line->cur_sec = addr = find_next_zero_bit(line->map_bitmap,
-					pblk->lm.sec_per_line, line->cur_sec);
+											  pblk->lm.sec_per_line, line->cur_sec);
 	for (i = 0; i < nr_secs; i++, line->cur_sec++)
 		WARN_ON(test_and_set_bit(line->cur_sec, line->map_bitmap));
 
@@ -619,7 +657,7 @@ u64 pblk_lookup_page(struct pblk *pblk, struct pblk_line *line)
 
 	spin_lock(&line->lock);
 	paddr = find_next_zero_bit(line->map_bitmap,
-					pblk->lm.sec_per_line, line->cur_sec);
+							   pblk->lm.sec_per_line, line->cur_sec);
 	spin_unlock(&line->lock);
 
 	return paddr;
@@ -630,7 +668,7 @@ u64 pblk_lookup_page(struct pblk *pblk, struct pblk_line *line)
  * taking the per LUN semaphore.
  */
 static int pblk_line_submit_emeta_io(struct pblk *pblk, struct pblk_line *line,
-				     void *emeta_buf, u64 paddr, int dir)
+									 void *emeta_buf, u64 paddr, int dir)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -648,17 +686,21 @@ static int pblk_line_submit_emeta_io(struct pblk *pblk, struct pblk_line *line,
 	int i, j;
 	int ret;
 
-	if (dir == PBLK_WRITE) {
+	if (dir == PBLK_WRITE)
+	{
 		bio_op = REQ_OP_WRITE;
 		cmd_op = NVM_OP_PWRITE;
-	} else if (dir == PBLK_READ) {
+	}
+	else if (dir == PBLK_READ)
+	{
 		bio_op = REQ_OP_READ;
 		cmd_op = NVM_OP_PREAD;
-	} else
+	}
+	else
 		return -EINVAL;
 
 	meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL,
-							&dma_meta_list);
+								  &dma_meta_list);
 	if (!meta_list)
 		return -ENOMEM;
 
@@ -672,8 +714,9 @@ next_rq:
 	rq_len = rq_ppas * geo->csecs;
 
 	bio = pblk_bio_map_addr(pblk, emeta_buf, rq_ppas, rq_len,
-					l_mg->emeta_alloc_type, GFP_KERNEL);
-	if (IS_ERR(bio)) {
+							l_mg->emeta_alloc_type, GFP_KERNEL);
+	if (IS_ERR(bio))
+	{
 		ret = PTR_ERR(bio);
 		goto free_rqd_dma;
 	}
@@ -689,22 +732,28 @@ next_rq:
 	rqd.opcode = cmd_op;
 	rqd.nr_ppas = rq_ppas;
 
-	if (dir == PBLK_WRITE) {
+	if (dir == PBLK_WRITE)
+	{
 		struct pblk_sec_meta *meta_list = rqd.meta_list;
 
 		rqd.flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
-		for (i = 0; i < rqd.nr_ppas; ) {
+		for (i = 0; i < rqd.nr_ppas;)
+		{
 			spin_lock(&line->lock);
 			paddr = __pblk_alloc_page(pblk, line, min);
 			spin_unlock(&line->lock);
-			for (j = 0; j < min; j++, i++, paddr++) {
+			for (j = 0; j < min; j++, i++, paddr++)
+			{
 				meta_list[i].lba = cpu_to_le64(ADDR_EMPTY);
 				rqd.ppa_list[i] =
 					addr_to_gen_ppa(pblk, paddr, id);
 			}
 		}
-	} else {
-		for (i = 0; i < rqd.nr_ppas; ) {
+	}
+	else
+	{
+		for (i = 0; i < rqd.nr_ppas;)
+		{
 			struct ppa_addr ppa = addr_to_gen_ppa(pblk, paddr, id);
 			int pos = pblk_ppa_to_pos(geo, ppa);
 			int read_type = PBLK_READ_RANDOM;
@@ -713,11 +762,13 @@ next_rq:
 				read_type = PBLK_READ_SEQUENTIAL;
 			rqd.flags = pblk_set_read_mode(pblk, read_type);
 
-			while (test_bit(pos, line->blk_bitmap)) {
+			while (test_bit(pos, line->blk_bitmap))
+			{
 				paddr += min;
-				if (pblk_boundary_paddr_checks(pblk, paddr)) {
+				if (pblk_boundary_paddr_checks(pblk, paddr))
+				{
 					pr_err("pblk: corrupt emeta line:%d\n",
-								line->id);
+						   line->id);
 					bio_put(bio);
 					ret = -EINTR;
 					goto free_rqd_dma;
@@ -727,9 +778,10 @@ next_rq:
 				pos = pblk_ppa_to_pos(geo, ppa);
 			}
 
-			if (pblk_boundary_paddr_checks(pblk, paddr + min)) {
+			if (pblk_boundary_paddr_checks(pblk, paddr + min))
+			{
 				pr_err("pblk: corrupt emeta line:%d\n",
-								line->id);
+					   line->id);
 				bio_put(bio);
 				ret = -EINTR;
 				goto free_rqd_dma;
@@ -742,7 +794,8 @@ next_rq:
 	}
 
 	ret = pblk_submit_io_sync(pblk, &rqd);
-	if (ret) {
+	if (ret)
+	{
 		pr_err("pblk: emeta I/O submission failed: %d\n", ret);
 		bio_put(bio);
 		goto free_rqd_dma;
@@ -750,7 +803,8 @@ next_rq:
 
 	atomic_dec(&pblk->inflight_io);
 
-	if (rqd.error) {
+	if (rqd.error)
+	{
 		if (dir == PBLK_WRITE)
 			pblk_log_write_err(pblk, &rqd);
 		else
@@ -782,7 +836,7 @@ u64 pblk_line_smeta_start(struct pblk *pblk, struct pblk_line *line)
 }
 
 static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
-				     u64 paddr, int dir)
+									 u64 paddr, int dir)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct pblk_line_meta *lm = &pblk->lm;
@@ -793,22 +847,26 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 	int cmd_op, bio_op;
 	int flags;
 
-	if (dir == PBLK_WRITE) {
+	if (dir == PBLK_WRITE)
+	{
 		bio_op = REQ_OP_WRITE;
 		cmd_op = NVM_OP_PWRITE;
 		flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
 		lba_list = emeta_to_lbas(pblk, line->emeta->buf);
-	} else if (dir == PBLK_READ_RECOV || dir == PBLK_READ) {
+	}
+	else if (dir == PBLK_READ_RECOV || dir == PBLK_READ)
+	{
 		bio_op = REQ_OP_READ;
 		cmd_op = NVM_OP_PREAD;
 		flags = pblk_set_read_mode(pblk, PBLK_READ_SEQUENTIAL);
-	} else
+	}
+	else
 		return -EINVAL;
 
 	memset(&rqd, 0, sizeof(struct nvm_rq));
 
 	rqd.meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL,
-							&rqd.dma_meta_list);
+									  &rqd.dma_meta_list);
 	if (!rqd.meta_list)
 		return -ENOMEM;
 
@@ -816,7 +874,8 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 	rqd.dma_ppa_list = rqd.dma_meta_list + pblk_dma_meta_size;
 
 	bio = bio_map_kern(dev->q, line->smeta, lm->smeta_len, GFP_KERNEL);
-	if (IS_ERR(bio)) {
+	if (IS_ERR(bio))
+	{
 		ret = PTR_ERR(bio);
 		goto free_ppa_list;
 	}
@@ -829,12 +888,14 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 	rqd.flags = flags;
 	rqd.nr_ppas = lm->smeta_sec;
 
-	for (i = 0; i < lm->smeta_sec; i++, paddr++) {
+	for (i = 0; i < lm->smeta_sec; i++, paddr++)
+	{
 		struct pblk_sec_meta *meta_list = rqd.meta_list;
 
 		rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
 
-		if (dir == PBLK_WRITE) {
+		if (dir == PBLK_WRITE)
+		{
 			__le64 addr_empty = cpu_to_le64(ADDR_EMPTY);
 
 			meta_list[i].lba = lba_list[paddr] = addr_empty;
@@ -847,7 +908,8 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 	 * there is no need to take the LUN semaphore.
 	 */
 	ret = pblk_submit_io_sync(pblk, &rqd);
-	if (ret) {
+	if (ret)
+	{
 		pr_err("pblk: smeta I/O submission failed: %d\n", ret);
 		bio_put(bio);
 		goto free_ppa_list;
@@ -855,7 +917,8 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 
 	atomic_dec(&pblk->inflight_io);
 
-	if (rqd.error) {
+	if (rqd.error)
+	{
 		if (dir == PBLK_WRITE)
 			pblk_log_write_err(pblk, &rqd);
 		else if (dir == PBLK_READ)
@@ -872,18 +935,22 @@ int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line)
 {
 	u64 bpaddr = pblk_line_smeta_start(pblk, line);
 
+	//test_print
+	printk("pblk-core.c[939]:pblk_line_read_smeta:pblk_line_smeta_start = %llu = %llx\n", bpaddr, bpaddr);
+	//test_end
+
 	return pblk_line_submit_smeta_io(pblk, line, bpaddr, PBLK_READ_RECOV);
 }
 
 int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
-			 void *emeta_buf)
+						 void *emeta_buf)
 {
 	return pblk_line_submit_emeta_io(pblk, line, emeta_buf,
-						line->emeta_ssec, PBLK_READ);
+									 line->emeta_ssec, PBLK_READ);
 }
 
 static void pblk_setup_e_rq(struct pblk *pblk, struct nvm_rq *rqd,
-			    struct ppa_addr ppa)
+							struct ppa_addr ppa)
 {
 	rqd->opcode = NVM_OP_ERASE;
 	rqd->ppa_addr = ppa;
@@ -905,13 +972,14 @@ static int pblk_blk_erase_sync(struct pblk *pblk, struct ppa_addr ppa)
 	 * with writes. Thus, there is no need to take the LUN semaphore.
 	 */
 	ret = pblk_submit_io_sync(pblk, &rqd);
-	if (ret) {
+	if (ret)
+	{
 		struct nvm_tgt_dev *dev = pblk->dev;
 		struct nvm_geo *geo = &dev->geo;
 
 		pr_err("pblk: could not sync erase line:%d,blk:%d\n",
-					pblk_ppa_to_line(ppa),
-					pblk_ppa_to_pos(geo, ppa));
+			   pblk_ppa_to_line(ppa),
+			   pblk_ppa_to_pos(geo, ppa));
 
 		rqd.error = ret;
 		goto out;
@@ -931,11 +999,13 @@ int pblk_line_erase(struct pblk *pblk, struct pblk_line *line)
 	int ret, bit = -1;
 
 	/* Erase only good blocks, one at a time */
-	do {
+	do
+	{
 		spin_lock(&line->lock);
 		bit = find_next_zero_bit(line->erase_bitmap, lm->blk_per_line,
-								bit + 1);
-		if (bit >= lm->blk_per_line) {
+								 bit + 1);
+		if (bit >= lm->blk_per_line)
+		{
 			spin_unlock(&line->lock);
 			break;
 		}
@@ -948,7 +1018,8 @@ int pblk_line_erase(struct pblk *pblk, struct pblk_line *line)
 		spin_unlock(&line->lock);
 
 		ret = pblk_blk_erase_sync(pblk, ppa);
-		if (ret) {
+		if (ret)
+		{
 			pr_err("pblk: failed to erase line %d\n", line->id);
 			return ret;
 		}
@@ -958,8 +1029,8 @@ int pblk_line_erase(struct pblk *pblk, struct pblk_line *line)
 }
 
 static void pblk_line_setup_metadata(struct pblk_line *line,
-				     struct pblk_line_mgmt *l_mg,
-				     struct pblk_line_meta *lm)
+									 struct pblk_line_mgmt *l_mg,
+									 struct pblk_line_meta *lm)
 {
 	int meta_line;
 
@@ -967,7 +1038,8 @@ static void pblk_line_setup_metadata(struct pblk_line *line,
 
 retry_meta:
 	meta_line = find_first_zero_bit(&l_mg->meta_bitmap, PBLK_DATA_LINES);
-	if (meta_line == PBLK_DATA_LINES) {
+	if (meta_line == PBLK_DATA_LINES)
+	{
 		spin_unlock(&l_mg->free_lock);
 		io_schedule();
 		spin_lock(&l_mg->free_lock);
@@ -991,7 +1063,7 @@ retry_meta:
  * lun bitmaps are omitted.
  */
 static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
-				  struct pblk_line *cur)
+								   struct pblk_line *cur)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -1006,8 +1078,9 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 	 * having an invalid line
 	 */
 	nr_blk_line = lm->blk_per_line -
-			bitmap_weight(line->blk_bitmap, lm->blk_per_line);
-	if (nr_blk_line < lm->min_blk_line) {
+				  bitmap_weight(line->blk_bitmap, lm->blk_per_line);
+	if (nr_blk_line < lm->min_blk_line)
+	{
 		spin_lock(&l_mg->free_lock);
 		spin_lock(&line->lock);
 		line->state = PBLK_LINESTATE_BAD;
@@ -1039,27 +1112,30 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 	smeta_buf->window_wr_lun = cpu_to_le32(geo->all_luns);
 
 	/* Fill metadata among lines */
-	if (cur) {
+	if (cur)
+	{
 		memcpy(line->lun_bitmap, cur->lun_bitmap, lm->lun_bitmap_len);
 		smeta_buf->prev_id = cpu_to_le32(cur->id);
 		cur->emeta->buf->next_id = cpu_to_le32(line->id);
-	} else {
+	}
+	else
+	{
 		smeta_buf->prev_id = cpu_to_le32(PBLK_LINE_EMPTY);
 	}
 
 	/* All smeta must be set at this point */
 	smeta_buf->header.crc = cpu_to_le32(
-			pblk_calc_meta_header_crc(pblk, &smeta_buf->header));
+		pblk_calc_meta_header_crc(pblk, &smeta_buf->header));
 	smeta_buf->crc = cpu_to_le32(pblk_calc_smeta_crc(pblk, smeta_buf));
 
 	/* End metadata */
 	memcpy(&emeta_buf->header, &smeta_buf->header,
-						sizeof(struct line_header));
+		   sizeof(struct line_header));
 
 	emeta_buf->header.version_major = EMETA_VERSION_MAJOR;
 	emeta_buf->header.version_minor = EMETA_VERSION_MINOR;
 	emeta_buf->header.crc = cpu_to_le32(
-			pblk_calc_meta_header_crc(pblk, &emeta_buf->header));
+		pblk_calc_meta_header_crc(pblk, &emeta_buf->header));
 
 	emeta_buf->seq_nr = cpu_to_le64(line->seq_nr);
 	emeta_buf->nr_lbas = cpu_to_le64(line->sec_in_line);
@@ -1075,7 +1151,7 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
  * lun bitmaps are omitted.
  */
 static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
-			     int init)
+							 int init)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -1089,12 +1165,13 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 
 	/* Capture bad block information on line mapping bitmaps */
 	while ((bit = find_next_bit(line->blk_bitmap, lm->blk_per_line,
-					bit + 1)) < lm->blk_per_line) {
+								bit + 1)) < lm->blk_per_line)
+	{
 		off = bit * geo->ws_opt;
 		bitmap_shift_left(l_mg->bb_aux, l_mg->bb_template, off,
-							lm->sec_per_line);
+						  lm->sec_per_line);
 		bitmap_or(line->map_bitmap, line->map_bitmap, l_mg->bb_aux,
-							lm->sec_per_line);
+				  lm->sec_per_line);
 		line->sec_in_line -= geo->clba;
 	}
 
@@ -1106,7 +1183,8 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 	line->smeta_ssec = off;
 	line->cur_sec = off + lm->smeta_sec;
 
-	if (init && pblk_line_submit_smeta_io(pblk, line, off, PBLK_WRITE)) {
+	if (init && pblk_line_submit_smeta_io(pblk, line, off, PBLK_WRITE))
+	{
 		pr_debug("pblk: line smeta I/O failed. Retry\n");
 		return 1;
 	}
@@ -1118,9 +1196,11 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 	 */
 	emeta_secs = lm->emeta_sec[0];
 	off = lm->sec_per_line;
-	while (emeta_secs) {
+	while (emeta_secs)
+	{
 		off -= geo->ws_opt;
-		if (!test_bit(off, line->invalid_bitmap)) {
+		if (!test_bit(off, line->invalid_bitmap))
+		{
 			bitmap_set(line->invalid_bitmap, off, geo->ws_opt);
 			emeta_secs -= geo->ws_opt;
 		}
@@ -1133,7 +1213,8 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 	*line->vsc = cpu_to_le32(line->sec_in_line);
 
 	if (lm->sec_per_line - line->sec_in_line !=
-		bitmap_weight(line->invalid_bitmap, lm->sec_per_line)) {
+		bitmap_weight(line->invalid_bitmap, lm->sec_per_line))
+	{
 		spin_lock(&line->lock);
 		line->state = PBLK_LINESTATE_BAD;
 		spin_unlock(&line->lock);
@@ -1155,15 +1236,17 @@ static int pblk_prepare_new_line(struct pblk *pblk, struct pblk_line *line)
 	int blk_to_erase = atomic_read(&line->blk_in_line);
 	int i;
 
-	for (i = 0; i < lm->blk_per_line; i++) {
+	for (i = 0; i < lm->blk_per_line; i++)
+	{
 		struct pblk_lun *rlun = &pblk->luns[i];
 		int pos = pblk_ppa_to_pos(geo, rlun->bppa);
 		int state = line->chks[pos].state;
 
 		/* Free chunks should not be erased */
-		if (state & NVM_CHK_ST_FREE) {
+		if (state & NVM_CHK_ST_FREE)
+		{
 			set_bit(pblk_ppa_to_pos(geo, rlun->bppa),
-							line->erase_bitmap);
+					line->erase_bitmap);
 			blk_to_erase--;
 		}
 	}
@@ -1182,7 +1265,8 @@ static int pblk_line_prepare(struct pblk *pblk, struct pblk_line *line)
 
 	/* will be initialized using bb info from map_bitmap */
 	line->invalid_bitmap = kmalloc(lm->sec_bitmap_len, GFP_ATOMIC);
-	if (!line->invalid_bitmap) {
+	if (!line->invalid_bitmap)
+	{
 		kfree(line->map_bitmap);
 		return -ENOMEM;
 	}
@@ -1195,19 +1279,23 @@ static int pblk_line_prepare(struct pblk *pblk, struct pblk_line *line)
 	/* If we have not written to this line, we need to mark up free chunks
 	 * as already erased
 	 */
-	if (line->state == PBLK_LINESTATE_NEW) {
+	if (line->state == PBLK_LINESTATE_NEW)
+	{
 		blk_to_erase = pblk_prepare_new_line(pblk, line);
 		line->state = PBLK_LINESTATE_FREE;
-	} else {
+	}
+	else
+	{
 		blk_to_erase = atomic_read(&line->blk_in_line);
 	}
 
-	if (line->state != PBLK_LINESTATE_FREE) {
+	if (line->state != PBLK_LINESTATE_FREE)
+	{
 		kfree(line->map_bitmap);
 		kfree(line->invalid_bitmap);
 		spin_unlock(&line->lock);
 		WARN(1, "pblk: corrupted line %d, state %d\n",
-							line->id, line->state);
+			 line->id, line->state);
 		return -EAGAIN;
 	}
 
@@ -1234,7 +1322,8 @@ int pblk_line_recov_alloc(struct pblk *pblk, struct pblk_line *line)
 	list_del(&line->list);
 
 	ret = pblk_line_prepare(pblk, line);
-	if (ret) {
+	if (ret)
+	{
 		list_add(&line->list, &l_mg->free_list);
 		spin_unlock(&l_mg->free_lock);
 		return ret;
@@ -1243,7 +1332,8 @@ int pblk_line_recov_alloc(struct pblk *pblk, struct pblk_line *line)
 
 	pblk_rl_free_lines_dec(&pblk->rl, line, true);
 
-	if (!pblk_line_init_bb(pblk, line, 0)) {
+	if (!pblk_line_init_bb(pblk, line, 0))
+	{
 		list_add(&line->list, &l_mg->free_list);
 		return -EINTR;
 	}
@@ -1269,7 +1359,8 @@ struct pblk_line *pblk_line_get(struct pblk *pblk)
 	lockdep_assert_held(&l_mg->free_lock);
 
 retry:
-	if (list_empty(&l_mg->free_list)) {
+	if (list_empty(&l_mg->free_list))
+	{
 		pr_err("pblk: no free lines\n");
 		return NULL;
 	}
@@ -1279,7 +1370,8 @@ retry:
 	l_mg->nr_free_lines--;
 
 	bit = find_first_zero_bit(line->blk_bitmap, lm->blk_per_line);
-	if (unlikely(bit >= lm->blk_per_line)) {
+	if (unlikely(bit >= lm->blk_per_line))
+	{
 		spin_lock(&line->lock);
 		line->state = PBLK_LINESTATE_BAD;
 		spin_unlock(&line->lock);
@@ -1291,11 +1383,15 @@ retry:
 	}
 
 	ret = pblk_line_prepare(pblk, line);
-	if (ret) {
-		if (ret == -EAGAIN) {
+	if (ret)
+	{
+		if (ret == -EAGAIN)
+		{
 			list_add(&line->list, &l_mg->corrupt_list);
 			goto retry;
-		} else {
+		}
+		else
+		{
 			pr_err("pblk: failed to prepare line %d\n", line->id);
 			list_add(&line->list, &l_mg->free_list);
 			l_mg->nr_free_lines++;
@@ -1307,7 +1403,7 @@ retry:
 }
 
 static struct pblk_line *pblk_line_retry(struct pblk *pblk,
-					 struct pblk_line *line)
+										 struct pblk_line *line)
 {
 	struct pblk_line_mgmt *l_mg = &pblk->l_mg;
 	struct pblk_line *retry_line;
@@ -1315,7 +1411,8 @@ static struct pblk_line *pblk_line_retry(struct pblk *pblk,
 retry:
 	spin_lock(&l_mg->free_lock);
 	retry_line = pblk_line_get(pblk);
-	if (!retry_line) {
+	if (!retry_line)
+	{
 		l_mg->data_line = NULL;
 		spin_unlock(&l_mg->free_lock);
 		return NULL;
@@ -1351,7 +1448,8 @@ struct pblk_line *pblk_line_get_first_data(struct pblk *pblk)
 
 	spin_lock(&l_mg->free_lock);
 	line = pblk_line_get(pblk);
-	if (!line) {
+	if (!line)
+	{
 		spin_unlock(&l_mg->free_lock);
 		return NULL;
 	}
@@ -1364,7 +1462,8 @@ struct pblk_line *pblk_line_get_first_data(struct pblk *pblk)
 
 	/* Allocate next line for preparation */
 	l_mg->data_next = pblk_line_get(pblk);
-	if (!l_mg->data_next) {
+	if (!l_mg->data_next)
+	{
 		/* If we cannot get a new line, we need to stop the pipeline.
 		 * Only allow as many writes in as we can store safely and then
 		 * fail gracefully
@@ -1372,20 +1471,24 @@ struct pblk_line *pblk_line_get_first_data(struct pblk *pblk)
 		pblk_set_space_limit(pblk);
 
 		l_mg->data_next = NULL;
-	} else {
+	}
+	else
+	{
 		l_mg->data_next->seq_nr = l_mg->d_seq_nr++;
 		l_mg->data_next->type = PBLK_LINETYPE_DATA;
 	}
 	spin_unlock(&l_mg->free_lock);
 
-	if (pblk_line_erase(pblk, line)) {
+	if (pblk_line_erase(pblk, line))
+	{
 		line = pblk_line_retry(pblk, line);
 		if (!line)
 			return NULL;
 	}
 
 retry_setup:
-	if (!pblk_line_init_metadata(pblk, line, NULL)) {
+	if (!pblk_line_init_metadata(pblk, line, NULL))
+	{
 		line = pblk_line_retry(pblk, line);
 		if (!line)
 			return NULL;
@@ -1393,7 +1496,8 @@ retry_setup:
 		goto retry_setup;
 	}
 
-	if (!pblk_line_init_bb(pblk, line, 1)) {
+	if (!pblk_line_init_bb(pblk, line, 1))
+	{
 		line = pblk_line_retry(pblk, line);
 		if (!line)
 			return NULL;
@@ -1422,7 +1526,8 @@ static void pblk_line_close_meta_sync(struct pblk *pblk)
 	LIST_HEAD(list);
 
 	spin_lock(&l_mg->close_lock);
-	if (list_empty(&l_mg->emeta_list)) {
+	if (list_empty(&l_mg->emeta_list))
+	{
 		spin_unlock(&l_mg->close_lock);
 		return;
 	}
@@ -1430,16 +1535,19 @@ static void pblk_line_close_meta_sync(struct pblk *pblk)
 	list_cut_position(&list, &l_mg->emeta_list, l_mg->emeta_list.prev);
 	spin_unlock(&l_mg->close_lock);
 
-	list_for_each_entry_safe(line, tline, &list, list) {
+	list_for_each_entry_safe(line, tline, &list, list)
+	{
 		struct pblk_emeta *emeta = line->emeta;
 
-		while (emeta->mem < lm->emeta_len[0]) {
+		while (emeta->mem < lm->emeta_len[0])
+		{
 			int ret;
 
 			ret = pblk_submit_meta_io(pblk, line);
-			if (ret) {
+			if (ret)
+			{
 				pr_err("pblk: sync meta line %d failed (%d)\n",
-							line->id, ret);
+					   line->id, ret);
 				return;
 			}
 		}
@@ -1456,7 +1564,8 @@ void pblk_pipeline_stop(struct pblk *pblk)
 
 	spin_lock(&l_mg->free_lock);
 	if (pblk->state == PBLK_STATE_RECOVERING ||
-					pblk->state == PBLK_STATE_STOPPED) {
+		pblk->state == PBLK_STATE_STOPPED)
+	{
 		spin_unlock(&l_mg->free_lock);
 		return;
 	}
@@ -1467,7 +1576,8 @@ void pblk_pipeline_stop(struct pblk *pblk)
 	pblk_wait_for_meta(pblk);
 
 	ret = pblk_recov_pad(pblk);
-	if (ret) {
+	if (ret)
+	{
 		pr_err("pblk: could not close data on teardown(%d)\n", ret);
 		return;
 	}
@@ -1500,19 +1610,24 @@ struct pblk_line *pblk_line_replace_data(struct pblk *pblk)
 
 retry_erase:
 	left_seblks = atomic_read(&new->left_seblks);
-	if (left_seblks) {
+	if (left_seblks)
+	{
 		/* If line is not fully erased, erase it */
-		if (atomic_read(&new->left_eblks)) {
+		if (atomic_read(&new->left_eblks))
+		{
 			if (pblk_line_erase(pblk, new))
 				goto out;
-		} else {
+		}
+		else
+		{
 			io_schedule();
 		}
 		goto retry_erase;
 	}
 
 retry_setup:
-	if (!pblk_line_init_metadata(pblk, new, cur)) {
+	if (!pblk_line_init_metadata(pblk, new, cur))
+	{
 		new = pblk_line_retry(pblk, new);
 		if (!new)
 			goto out;
@@ -1520,7 +1635,8 @@ retry_setup:
 		goto retry_setup;
 	}
 
-	if (!pblk_line_init_bb(pblk, new, 1)) {
+	if (!pblk_line_init_bb(pblk, new, 1))
+	{
 		new = pblk_line_retry(pblk, new);
 		if (!new)
 			goto out;
@@ -1533,14 +1649,17 @@ retry_setup:
 	/* Allocate next line for preparation */
 	spin_lock(&l_mg->free_lock);
 	l_mg->data_next = pblk_line_get(pblk);
-	if (!l_mg->data_next) {
+	if (!l_mg->data_next)
+	{
 		/* If we cannot get a new line, we need to stop the pipeline.
 		 * Only allow as many writes in as we can store safely and then
 		 * fail gracefully
 		 */
 		pblk_stop_writes(pblk, new);
 		l_mg->data_next = NULL;
-	} else {
+	}
+	else
+	{
 		l_mg->data_next->seq_nr = l_mg->d_seq_nr++;
 		l_mg->data_next->type = PBLK_LINETYPE_DATA;
 	}
@@ -1588,7 +1707,7 @@ static void __pblk_line_put(struct pblk *pblk, struct pblk_line *line)
 static void pblk_line_put_ws(struct work_struct *work)
 {
 	struct pblk_line_ws *line_put_ws = container_of(work,
-						struct pblk_line_ws, ws);
+													struct pblk_line_ws, ws);
 	struct pblk *pblk = line_put_ws->pblk;
 	struct pblk_line *line = line_put_ws->line;
 
@@ -1638,13 +1757,14 @@ int pblk_blk_erase_async(struct pblk *pblk, struct ppa_addr ppa)
 	 * with writes. Thus, there is no need to take the LUN semaphore.
 	 */
 	err = pblk_submit_io(pblk, rqd);
-	if (err) {
+	if (err)
+	{
 		struct nvm_tgt_dev *dev = pblk->dev;
 		struct nvm_geo *geo = &dev->geo;
 
 		pr_err("pblk: could not async erase line:%d,blk:%d\n",
-					pblk_ppa_to_line(ppa),
-					pblk_ppa_to_pos(geo, ppa));
+			   pblk_ppa_to_line(ppa),
+			   pblk_ppa_to_pos(geo, ppa));
 	}
 
 	return err;
@@ -1683,7 +1803,7 @@ void pblk_line_close(struct pblk *pblk, struct pblk_line *line)
 
 #ifdef CONFIG_NVM_DEBUG
 	WARN(!bitmap_full(line->map_bitmap, lm->sec_per_line),
-				"pblk: corrupt closed line %d\n", line->id);
+		 "pblk: corrupt closed line %d\n", line->id);
 #endif
 
 	spin_lock(&l_mg->free_lock);
@@ -1703,7 +1823,8 @@ void pblk_line_close(struct pblk *pblk, struct pblk_line *line)
 	line->smeta = NULL;
 	line->emeta = NULL;
 
-	for (i = 0; i < lm->blk_per_line; i++) {
+	for (i = 0; i < lm->blk_per_line; i++)
+	{
 		struct pblk_lun *rlun = &pblk->luns[i];
 		int pos = pblk_ppa_to_pos(geo, rlun->bppa);
 		int state = line->chks[pos].state;
@@ -1747,7 +1868,7 @@ void pblk_line_close_meta(struct pblk *pblk, struct pblk_line *line)
 void pblk_line_close_ws(struct work_struct *work)
 {
 	struct pblk_line_ws *line_ws = container_of(work, struct pblk_line_ws,
-									ws);
+												ws);
 	struct pblk *pblk = line_ws->pblk;
 	struct pblk_line *line = line_ws->line;
 
@@ -1756,8 +1877,8 @@ void pblk_line_close_ws(struct work_struct *work)
 }
 
 void pblk_gen_run_ws(struct pblk *pblk, struct pblk_line *line, void *priv,
-		      void (*work)(struct work_struct *), gfp_t gfp_mask,
-		      struct workqueue_struct *wq)
+					 void (*work)(struct work_struct *), gfp_t gfp_mask,
+					 struct workqueue_struct *wq)
 {
 	struct pblk_line_ws *line_ws;
 
@@ -1772,7 +1893,7 @@ void pblk_gen_run_ws(struct pblk *pblk, struct pblk_line *line, void *priv,
 }
 
 static void __pblk_down_page(struct pblk *pblk, struct ppa_addr *ppa_list,
-			     int nr_ppas, int pos)
+							 int nr_ppas, int pos)
 {
 	struct pblk_lun *rlun = &pblk->luns[pos];
 	int ret;
@@ -1804,7 +1925,7 @@ void pblk_down_page(struct pblk *pblk, struct ppa_addr *ppa_list, int nr_ppas)
 }
 
 void pblk_down_rq(struct pblk *pblk, struct ppa_addr *ppa_list, int nr_ppas,
-		  unsigned long *lun_bitmap)
+				  unsigned long *lun_bitmap)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -1839,7 +1960,7 @@ void pblk_up_page(struct pblk *pblk, struct ppa_addr *ppa_list, int nr_ppas)
 }
 
 void pblk_up_rq(struct pblk *pblk, struct ppa_addr *ppa_list, int nr_ppas,
-		unsigned long *lun_bitmap)
+				unsigned long *lun_bitmap)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
@@ -1847,7 +1968,8 @@ void pblk_up_rq(struct pblk *pblk, struct ppa_addr *ppa_list, int nr_ppas,
 	int num_lun = geo->all_luns;
 	int bit = -1;
 
-	while ((bit = find_next_bit(lun_bitmap, num_lun, bit + 1)) < num_lun) {
+	while ((bit = find_next_bit(lun_bitmap, num_lun, bit + 1)) < num_lun)
+	{
 		rlun = &pblk->luns[bit];
 		up(&rlun->wr_sem);
 	}
@@ -1858,7 +1980,8 @@ void pblk_update_map(struct pblk *pblk, sector_t lba, struct ppa_addr ppa)
 	struct ppa_addr ppa_l2p;
 
 	/* logic error: lba out-of-bounds. Ignore update */
-	if (!(lba < pblk->rl.nr_secs)) {
+	if (!(lba < pblk->rl.nr_secs))
+	{
 		WARN(1, "pblk: corrupted L2P map request\n");
 		return;
 	}
@@ -1886,7 +2009,7 @@ void pblk_update_map_cache(struct pblk *pblk, sector_t lba, struct ppa_addr ppa)
 }
 
 int pblk_update_map_gc(struct pblk *pblk, sector_t lba, struct ppa_addr ppa_new,
-		       struct pblk_line *gc_line, u64 paddr_gc)
+					   struct pblk_line *gc_line, u64 paddr_gc)
 {
 	struct ppa_addr ppa_l2p, ppa_gc;
 	int ret = 1;
@@ -1898,7 +2021,8 @@ int pblk_update_map_gc(struct pblk *pblk, sector_t lba, struct ppa_addr ppa_new,
 #endif
 
 	/* logic error: lba out-of-bounds. Ignore update */
-	if (!(lba < pblk->rl.nr_secs)) {
+	if (!(lba < pblk->rl.nr_secs))
+	{
 		WARN(1, "pblk: corrupted L2P map request\n");
 		return 0;
 	}
@@ -1907,10 +2031,11 @@ int pblk_update_map_gc(struct pblk *pblk, sector_t lba, struct ppa_addr ppa_new,
 	ppa_l2p = pblk_trans_map_get(pblk, lba);
 	ppa_gc = addr_to_gen_ppa(pblk, paddr_gc, gc_line->id);
 
-	if (!pblk_ppa_comp(ppa_l2p, ppa_gc)) {
+	if (!pblk_ppa_comp(ppa_l2p, ppa_gc))
+	{
 		spin_lock(&gc_line->lock);
 		WARN(!test_bit(paddr_gc, gc_line->invalid_bitmap),
-						"pblk: corrupted GC update");
+			 "pblk: corrupted GC update");
 		spin_unlock(&gc_line->lock);
 
 		ret = 0;
@@ -1924,7 +2049,7 @@ out:
 }
 
 void pblk_update_map_dev(struct pblk *pblk, sector_t lba,
-			 struct ppa_addr ppa_mapped, struct ppa_addr ppa_cache)
+						 struct ppa_addr ppa_mapped, struct ppa_addr ppa_cache)
 {
 	struct ppa_addr ppa_l2p;
 
@@ -1933,7 +2058,8 @@ void pblk_update_map_dev(struct pblk *pblk, sector_t lba,
 	BUG_ON(pblk_addr_in_cache(ppa_mapped));
 #endif
 	/* Invalidate and discard padded entries */
-	if (lba == ADDR_EMPTY) {
+	if (lba == ADDR_EMPTY)
+	{
 		atomic64_inc(&pblk->pad_wa);
 #ifdef CONFIG_NVM_DEBUG
 		atomic_long_inc(&pblk->padded_wb);
@@ -1944,7 +2070,8 @@ void pblk_update_map_dev(struct pblk *pblk, sector_t lba,
 	}
 
 	/* logic error: lba out-of-bounds. Ignore update */
-	if (!(lba < pblk->rl.nr_secs)) {
+	if (!(lba < pblk->rl.nr_secs))
+	{
 		WARN(1, "pblk: corrupted L2P map request\n");
 		return;
 	}
@@ -1955,7 +2082,8 @@ void pblk_update_map_dev(struct pblk *pblk, sector_t lba,
 	/* Do not update L2P if the cacheline has been updated. In this case,
 	 * the mapped ppa must be invalidated
 	 */
-	if (!pblk_ppa_comp(ppa_l2p, ppa_cache)) {
+	if (!pblk_ppa_comp(ppa_l2p, ppa_cache))
+	{
 		if (!pblk_ppa_empty(ppa_mapped))
 			pblk_map_invalidate(pblk, ppa_mapped);
 		goto out;
@@ -1971,18 +2099,20 @@ out:
 }
 
 void pblk_lookup_l2p_seq(struct pblk *pblk, struct ppa_addr *ppas,
-			 sector_t blba, int nr_secs)
+						 sector_t blba, int nr_secs)
 {
 	int i;
 
 	spin_lock(&pblk->trans_lock);
-	for (i = 0; i < nr_secs; i++) {
+	for (i = 0; i < nr_secs; i++)
+	{
 		struct ppa_addr ppa;
 
 		ppa = ppas[i] = pblk_trans_map_get(pblk, blba + i);
 
 		/* If the L2P entry maps to a line, the reference is valid */
-		if (!pblk_ppa_empty(ppa) && !pblk_addr_in_cache(ppa)) {
+		if (!pblk_ppa_empty(ppa) && !pblk_addr_in_cache(ppa))
+		{
 			int line_id = pblk_ppa_to_line(ppa);
 			struct pblk_line *line = &pblk->lines[line_id];
 
@@ -1993,17 +2123,20 @@ void pblk_lookup_l2p_seq(struct pblk *pblk, struct ppa_addr *ppas,
 }
 
 void pblk_lookup_l2p_rand(struct pblk *pblk, struct ppa_addr *ppas,
-			  u64 *lba_list, int nr_secs)
+						  u64 *lba_list, int nr_secs)
 {
 	u64 lba;
 	int i;
 
 	spin_lock(&pblk->trans_lock);
-	for (i = 0; i < nr_secs; i++) {
+	for (i = 0; i < nr_secs; i++)
+	{
 		lba = lba_list[i];
-		if (lba != ADDR_EMPTY) {
+		if (lba != ADDR_EMPTY)
+		{
 			/* logic error: lba out-of-bounds. Ignore update */
-			if (!(lba < pblk->rl.nr_secs)) {
+			if (!(lba < pblk->rl.nr_secs))
+			{
 				WARN(1, "pblk: corrupted L2P map request\n");
 				continue;
 			}
