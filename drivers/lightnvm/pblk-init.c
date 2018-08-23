@@ -1077,7 +1077,7 @@ add_emeta_page:
 											 lm->emeta_sec[0],
 										 geo->clba);
 	// test_print
-	printk("pblk-init.c[1060]:[pblk_line_meta_init]:lm->min_blk_line = (lm->smeta_sec + lm->emeta_sec[0])/geo->clba = (%u + %u)/%u  = %u\n", lm->smeta_sec, lm->emeta_sec[0], lm->min_blk_line);
+	printk("pblk-init.c[1060]:[pblk_line_meta_init]:lm->min_blk_line = (lm->smeta_sec + lm->emeta_sec[0])/geo->clba = (%u + %u)/%u  = %u\n", lm->smeta_sec, lm->emeta_sec[0], geo->clba, lm->min_blk_line);
 	// test_end
 
 	if (lm->min_blk_line > lm->blk_per_line)
