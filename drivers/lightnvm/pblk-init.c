@@ -953,12 +953,18 @@ static int pblk_line_mg_init(struct pblk *pblk)
 		}
 	}
 
+	//test_print
+	printk("------------------------------Get line number--------------------------------\n");
+	printk("pblk-init.c[957]:[pblk_line_mg_init]:l_mg->nr_lines = %d\n", l_mg->nr_lines);
+	//test_end
+
 	for (i = 0; i < l_mg->nr_lines; i++)
 		l_mg->vsc_list[i] = cpu_to_le32(EMPTY_ENTRY);
 
 	bb_distance = (geo->all_luns) * geo->ws_opt;
 
 	//test_print
+	printk("------------------------------Get line bad block distance--------------------------------\n");
 	printk("pblk-init.c[960]:[pblk_line_mg_init]:bb_distance = %d = %x\n", bb_distance, bb_distance);
 	//test_end
 
@@ -1005,6 +1011,10 @@ static int pblk_line_meta_init(struct pblk *pblk)
 	lm->high_thrs = lm->sec_per_line / 4;
 	lm->meta_distance = (geo->all_luns / 2) * pblk->min_write_pgs;
 
+	// test_print
+	printk("------------------------------Get smeta size--------------------------------\n");
+	// test_end
+
 	/* Calculate necessary pages for smeta. See comment over struct
 	 * line_smeta definition
 	 */
@@ -1024,6 +1034,10 @@ add_smeta_page:
 		i++;
 		goto add_smeta_page;
 	}
+
+	// test_print
+	printk("------------------------------Get emeta size--------------------------------\n");
+	// test_end
 
 	/* Calculate necessary pages for emeta. See comment over struct
 	 * line_emeta definition
@@ -1053,6 +1067,7 @@ add_emeta_page:
 	lm->emeta_bb = geo->all_luns > i ? geo->all_luns - i : 0;
 
 	// test_print
+	printk("------------------------------Get Boundary for bb that affects emeta--------------------------------\n");
 	printk("pblk-init.c[1051]:[pblk_line_meta_init]:lm->emeta_bb = %u = %x\n", lm->emeta_bb, lm->emeta_bb);
 	// test_end
 
@@ -1062,7 +1077,7 @@ add_emeta_page:
 											 lm->emeta_sec[0],
 										 geo->clba);
 	// test_print
-	printk("pblk-init.c[1060]:[pblk_line_meta_init]:lm->min_blk_line = %u = %x\n", lm->min_blk_line, lm->min_blk_line);
+	printk("pblk-init.c[1060]:[pblk_line_meta_init]:lm->min_blk_line = (lm->smeta_sec + lm->emeta_sec[0])/geo->clba = (%u + %u)/%u  = %u = %x\n", lm->smeta_sec, lm->emeta_sec[0], lm->min_blk_line, lm->min_blk_line);
 	// test_end
 
 	if (lm->min_blk_line > lm->blk_per_line)

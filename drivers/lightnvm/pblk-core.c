@@ -887,13 +887,18 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 	rqd.opcode = cmd_op;
 	rqd.flags = flags;
 	rqd.nr_ppas = lm->smeta_sec;
+	//test_print
+	printk("------------------------------Get line start ppa--------------------------------\n");
+	//test_end
 
 	for (i = 0; i < lm->smeta_sec; i++, paddr++)
 	{
 		struct pblk_sec_meta *meta_list = rqd.meta_list;
 
 		rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
-
+		//test_print
+		printk("pblk-core.c[897]:pblk_line_submit_smeta_io:line[%d] smeta start ppa = %llu\n", i, rqd.ppa_list[i].ppa);
+		//test_end
 		if (dir == PBLK_WRITE)
 		{
 			__le64 addr_empty = cpu_to_le64(ADDR_EMPTY);
