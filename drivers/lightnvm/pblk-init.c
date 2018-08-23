@@ -1226,6 +1226,9 @@ static void *pblk_init(struct nvm_tgt_dev *dev, struct gendisk *tdisk,
 	struct request_queue *tqueue = tdisk->queue;
 	struct pblk *pblk;
 	int ret;
+	unsigned long nSTime;
+	unsigned long nETime;
+	struct timeval str, end;
 
 	/* pblk supports 1.2 and 2.0 versions */
 	if (!(geo->version == NVM_OCSSD_SPEC_12 ||
@@ -1298,13 +1301,19 @@ static void *pblk_init(struct nvm_tgt_dev *dev, struct gendisk *tdisk,
 		pr_err("pblk: could not initialize write buffer\n");
 		goto fail_free_lines;
 	}
-
+	do_gettimeofday(&str);
+	printk("recover start : [%lu]\n", (unsigned long)str.tv_sec);
 	ret = pblk_l2p_init(pblk, flags & NVM_TARGET_FACTORY);
 	if (ret)
 	{
 		pr_err("pblk: could not initialize maps\n");
 		goto fail_free_rwb;
 	}
+	do_gettimeofday(&end);
+	printk("recover end : [%lu]\n", (unsigned long)end.tv_sec);
+	nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+	nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+	printk("diff : [%lu]\n", nETime - nSTime);
 
 	ret = pblk_writer_init(pblk);
 	if (ret)
