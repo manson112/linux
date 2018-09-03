@@ -652,7 +652,8 @@ static unsigned int calc_emeta_len(struct pblk *pblk)
 	lm->emeta_len[1] = lm->emeta_sec[1] * geo->csecs;
 
 	/* Round to sector size so that vsc_list starts on its own sector */
-	lm->dsec_per_line = lm->sec_per_line - lm->emeta_sec[0];
+	/* add lm->snapshot_sec */
+	lm->dsec_per_line = lm->sec_per_line - lm->emeta_sec[0] - lm->snapshot_sec;
 	lm->emeta_sec[2] = DIV_ROUND_UP(lm->dsec_per_line * sizeof(u64),
 									geo->csecs);
 	lm->emeta_len[2] = lm->emeta_sec[2] * geo->csecs;
@@ -693,7 +694,8 @@ static void pblk_set_provision(struct pblk *pblk, long nr_free_blks)
 	pblk->rl.nr_secs = nr_free_blks * geo->clba;
 
 	/* Consider sectors used for metadata */
-	sec_meta = (lm->smeta_sec + lm->emeta_sec[0]) * l_mg->nr_free_lines;
+	/* add lm->snapshot_sec */
+	sec_meta = (lm->smeta_sec + lm->emeta_sec[0] + lm->snapshot_sec) * l_mg->nr_free_lines;
 	blk_meta = DIV_ROUND_UP(sec_meta, geo->clba);
 
 	pblk->capacity = (provisioned - blk_meta) * geo->clba;
@@ -999,7 +1001,7 @@ static int pblk_line_meta_init(struct pblk *pblk)
 	struct nvm_tgt_dev *dev = pblk->dev;
 	struct nvm_geo *geo = &dev->geo;
 	struct pblk_line_meta *lm = &pblk->lm;
-	unsigned int smeta_len, emeta_len;
+	unsigned int smeta_len, emeta_len, snapshot_len; /* add snapshot len */
 	int i;
 
 	lm->sec_per_line = geo->clba * geo->all_luns;
@@ -1042,6 +1044,22 @@ add_smeta_page:
 	/* Calculate necessary pages for emeta. See comment over struct
 	 * line_emeta definition
 	 */
+add_snapshot_page:
+	lm->snapshot_sec = i * geo->ws_opt;
+	lm->snapshot_len = lm->snapshot_sec * geo->csecs;
+	// test_print
+	printk("pblk-init.c[1049]:[pblk_line_meta_init]:lm->snapshot_sec[0] = i*geo->ws_opt = %d * %u = %u = %x\n", i, geo->ws_opt, lm->snapshot_sec, lm->snapshot_sec);
+	printk("pblk-init.c[1050]:[pblk_line_meta_init]:lm->snapshot_len[0] = lm->snapshot_sec*geo->csecs = %u * %u = %u = %x\n", lm->snapshot_sec, geo->csecs, lm->snapshot_len, lm->snapshot_len);
+	// test_end
+	snapshot_len = sizeof(struct line_snapshot) + lm->sec_bitmap_len;
+	printk("pblk-init.c[1053]:[pblk_line_meta_init]:snapshot_len = %u = %x\n", snapshot_len, snapshot_len);
+
+	if (snapshot_len > lm->snapshot_len)
+	{
+		i++;
+		goto add_snapshot_page;
+	}
+
 	i = 1;
 add_emeta_page:
 	lm->emeta_sec[0] = i * geo->ws_opt;

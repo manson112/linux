@@ -941,10 +941,117 @@ int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line)
 	u64 bpaddr = pblk_line_smeta_start(pblk, line);
 
 	//test_print
-	printk("pblk-core.c[939]:pblk_line_read_smeta:pblk_line_smeta_start = %llu = %llx\n", bpaddr, bpaddr);
+	printk("pblk-core.c[944]:pblk_line_read_smeta:pblk_line_smeta_start = %llu = %llx\n", bpaddr, bpaddr);
 	//test_end
 
 	return pblk_line_submit_smeta_io(pblk, line, bpaddr, PBLK_READ_RECOV);
+}
+static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *line, u64 paddr, int dir)
+{
+	struct nvm_tgt_dev *dev = pblk->dev;
+	struct pblk_line_meta *lm = &pblk->lm;
+	struct bio *bio;
+	struct nvm_rq rqd;
+	struct pblk_snapshot *snapshot; /**/
+	__le64 *lba_list = NULL;
+	int i, ret;
+	int cmd_op, bio_op;
+	int flags;
+
+	if (dir == PBLK_WRITE)
+	{
+		bio_op = REQ_OP_WRITE;
+		cmd_op = NVM_OP_PWRITE;
+		flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
+		lba_list = emeta_to_lbas(pblk, line->emeta->buf);
+	}
+	else if (dir == PBLK_READ_RECOV || dir == PBLK_READ)
+	{
+		bio_op = REQ_OP_READ;
+		cmd_op = NVM_OP_PREAD;
+		flags = pblk_set_read_mode(pblk, PBLK_READ_SEQUENTIAL);
+	}
+	else
+		return -EINVAL;
+
+	memset(&rqd, 0, sizeof(struct nvm_rq));
+
+	rqd.meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL,
+									  &rqd.dma_meta_list);
+	if (!rqd.meta_list)
+		return -ENOMEM;
+
+	rqd.ppa_list = rqd.meta_list + pblk_dma_meta_size;
+	rqd.dma_ppa_list = rqd.dma_meta_list + pblk_dma_meta_size;
+	//
+	bio = bio_map_kern(dev->q, snapshot, lm->snapshot_len, GFP_KERNEL);
+
+	if (IS_ERR(bio))
+	{
+		ret = PTR_ERR(bio);
+		goto free_ppa_list;
+	}
+
+	bio->bi_iter.bi_sector = 0; /* internal bio */
+	bio_set_op_attrs(bio, bio_op, 0);
+
+	rqd.bio = bio;
+	rqd.opcode = cmd_op;
+	rqd.flags = flags;
+	rqd.nr_ppas = lm->snapshot_sec; /**/
+
+	//test_print
+	printk("------------------------------Get snapshot start ppa--------------------------------\n");
+	//test_end
+
+	for (i = 0; i < lm->snapshot_sec; i++, paddr++)
+	{
+		struct pblk_sec_meta *meta_list = rqd.meta_list;
+
+		rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
+		//test_print
+		printk("pblk-core.c[1013]:pblk_line_submit_snapshot_io:line[%u].sector[%d] smeta start ppa = %llu\n", line->id, i, rqd.ppa_list[i].ppa);
+		//test_end
+		if (dir == PBLK_WRITE)
+		{
+			__le64 addr_empty = cpu_to_le64(ADDR_EMPTY);
+
+			meta_list[i].lba = lba_list[paddr] = addr_empty;
+		}
+	}
+	ret = pblk_submit_io_sync(pblk, &rqd);
+	if (ret)
+	{
+		pr_err("pblk: smeta I/O submission failed: %d\n", ret);
+		bio_put(bio);
+		goto free_ppa_list;
+	}
+
+	atomic_dec(&pblk->inflight_io);
+
+	if (rqd.error)
+	{
+		if (dir == PBLK_WRITE)
+			pblk_log_write_err(pblk, &rqd);
+		else if (dir == PBLK_READ)
+			pblk_log_read_err(pblk, &rqd);
+	}
+
+free_ppa_list:
+	nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
+
+	return ret;
+}
+
+int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line)
+{
+	struct pblk_line_meta *lm = &pblk->lm;
+	//find smeta end
+	u64 bpaddr = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
+	//test_print
+	printk("pblk-core.c[956]:pblk_line_read_snapshot:pblk_line_smeta_end = %llu = %llx\n", bpaddr, bpaddr);
+	//test_end
+	return pblk_line_submit_snapshot_io(pblk, line, bpaddr, PBLK_READ_RECOV);
 }
 
 int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
@@ -1077,6 +1184,8 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 	struct pblk_emeta *emeta = line->emeta;
 	struct line_emeta *emeta_buf = emeta->buf;
 	struct line_smeta *smeta_buf = (struct line_smeta *)line->smeta;
+	struct pblk_snapshot *snapshot = line->snapshot;
+	struct line_snapshot *snapshot_buf = snapshot->buf;
 	int nr_blk_line;
 
 	/* After erasing the line, new bad blocks might appear and we risk
@@ -1132,6 +1241,8 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 	smeta_buf->header.crc = cpu_to_le32(
 		pblk_calc_meta_header_crc(pblk, &smeta_buf->header));
 	smeta_buf->crc = cpu_to_le32(pblk_calc_smeta_crc(pblk, smeta_buf));
+
+	snapshot_buf->crc = cpu_to_le32(0);
 
 	/* End metadata */
 	memcpy(&emeta_buf->header, &smeta_buf->header,
@@ -1195,6 +1306,13 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 	}
 
 	bitmap_copy(line->invalid_bitmap, line->map_bitmap, lm->sec_per_line);
+
+	/* mark snapshot as bad block */
+	off = line->cur_sec;
+
+	bitmap_set(line->invalid_bitmap, off, lm->snapshot_sec);
+	line->sec_in_line -= lm->snapshot_sec;
+	line->cur_sec = off + lm->snapshot_len;
 
 	/* Mark emeta metadata sectors as bad sectors. We need to consider bad
 	 * blocks to make sure that there are enough sectors to store emeta
@@ -1278,7 +1396,14 @@ static int pblk_line_prepare(struct pblk *pblk, struct pblk_line *line)
 
 	/* Bad blocks do not need to be erased */
 	bitmap_copy(line->erase_bitmap, line->blk_bitmap, lm->blk_per_line);
-
+	/* add l2p bitmap */
+	line->l2p_bitmap = kzalloc(lm->sec_bitmap_len, GFP_ATOMIC);
+	if (!line->l2p_bitmap)
+	{
+		kfree(line->invalid_bitmap);
+		kfree(line->map_bitmap);
+		return -ENOMEM;
+	}
 	spin_lock(&line->lock);
 
 	/* If we have not written to this line, we need to mark up free chunks
@@ -1678,6 +1803,7 @@ void pblk_line_free(struct pblk *pblk, struct pblk_line *line)
 {
 	kfree(line->map_bitmap);
 	kfree(line->invalid_bitmap);
+	kfree(line->l2p_bitmap);
 
 	*line->vsc = cpu_to_le32(EMPTY_ENTRY);
 
@@ -1685,6 +1811,7 @@ void pblk_line_free(struct pblk *pblk, struct pblk_line *line)
 	line->invalid_bitmap = NULL;
 	line->smeta = NULL;
 	line->emeta = NULL;
+	line->snapshot = NULL;
 }
 
 static void __pblk_line_put(struct pblk *pblk, struct pblk_line *line)

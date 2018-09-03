@@ -126,7 +126,69 @@ int pblk_recov_check_emeta(struct pblk *pblk, struct line_emeta *emeta_buf)
 
 	return 0;
 }
+int pblk_recov_check_snapshot(struct pblk *pblk, struct line_snapshot *snapshot_buf)
+{
+	u32 crc;
 
+	crc = pblk_calc_snapshot_crc(pblk, snapshot_buf);
+	if (le32_to_cpu(snapshot_buf->crc) != crc)
+		return 1;
+
+	return 0;
+}
+static int pblk_recov_l2p_from_snapshot(struct pblk *pblk, struct pblk_line *line)
+{
+	struct nvm_tgt_dev *dev = pblk->dev;
+	struct nvm_geo *geo = &dev->geo;
+	struct pblk_line_meta *lm = &pblk->lm;
+	struct pblk_snapshot *snapshot = line->snapshot;
+	struct line_snapshot *snapshot_buf = snapshot->buf;
+	__le64 *lba_list;
+	u64 data_start, data_end;
+	u64 nr_valid_lbas, nr_lbas = 0;
+	u64 i;
+
+	lba_list = snapshot_buf->line_trans_map;
+
+	if (!lba_list)
+		return 1;
+
+	/* add snapshot sectors */
+	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec + lm->snapshot_sec;
+	data_end = line->emeta_ssec;
+
+	for (i = data_start; i < data_end; i++)
+	{
+		struct ppa_addr ppa;
+		int pos;
+
+		ppa = addr_to_gen_ppa(pblk, i, line->id);
+		pos = pblk_ppa_to_pos(geo, ppa);
+
+		/* Do not update bad blocks */
+		if (test_bit(pos, line->blk_bitmap))
+			continue;
+
+		if (le64_to_cpu(lba_list[i]) == ADDR_EMPTY)
+		{
+			spin_lock(&line->lock);
+			if (test_and_set_bit(i, line->invalid_bitmap))
+				WARN_ONCE(1, "pblk: rec. double invalidate:\n");
+			else
+				le32_add_cpu(line->vsc, -1);
+			spin_unlock(&line->lock);
+
+			continue;
+		}
+
+		pblk_update_map(pblk, le64_to_cpu(lba_list[i]), ppa);
+		nr_lbas++;
+	}
+
+	line->left_msecs = 0;
+
+	return 0;
+}
 static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 {
 	struct nvm_tgt_dev *dev = pblk->dev;
@@ -143,7 +205,8 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 	if (!lba_list)
 		return 1;
 
-	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
+	/* add snapshot sectors */
+	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec + lm->snapshot_sec;
 	data_end = line->emeta_ssec;
 	nr_valid_lbas = le64_to_cpu(emeta_buf->nr_valid_lbas);
 
@@ -191,10 +254,10 @@ static int pblk_calc_sec_in_line(struct pblk *pblk, struct pblk_line *line)
 	struct pblk_line_meta *lm = &pblk->lm;
 	int nr_bb = bitmap_weight(line->blk_bitmap, lm->blk_per_line);
 
-	return lm->sec_per_line - lm->smeta_sec - lm->emeta_sec[0] -
+	/* add lm->snapshot_sec */
+	return lm->sec_per_line - lm->smeta_sec - lm->emeta_sec[0] - lm->snapshot_sec -
 		   nr_bb * geo->clba;
 }
-
 struct pblk_recov_alloc
 {
 	struct ppa_addr *ppa_list;
@@ -927,6 +990,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 	struct pblk_smeta *smeta;
 	struct pblk_emeta *emeta;
 	struct line_smeta *smeta_buf;
+	__le64 *lba_list;
 	int found_lines = 0, recovered_lines = 0, open_lines = 0;
 	int is_next = 0;
 	int meta_line;
@@ -1025,7 +1089,63 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 
 		goto out;
 	}
+	list_for_each_entry_safe(line, tline, &recov_list, list)
+	{
+		if (pblk_line_read_snapshot(pblk, line, line->snapshot->buf))
+		{
+			goto recov_from_emeta;
+		}
 
+		if (pblk_recov_check_snapshot(pblk, line->snapshot->buf))
+		{
+			goto recov_from_emeta;
+		}
+
+		lba_list = line->snapshot->buf->line_trans_map;
+		if (!lba_list)
+		{
+			goto recov_from_emeta;
+		}
+
+		line->emeta_ssec = pblk_line_emeta_start(pblk, line);
+
+		if (pblk_recov_l2p_from_snapshot(pblk, line))
+		{
+			goto recov_from_emeta;
+		}
+		if (pblk_line_is_full(line))
+		{
+			struct list_head *move_list;
+
+			spin_lock(&line->lock);
+			line->state = PBLK_LINESTATE_CLOSED;
+			move_list = pblk_line_gc_list(pblk, line);
+			spin_unlock(&line->lock);
+
+			spin_lock(&l_mg->gc_lock);
+			list_move_tail(&line->list, move_list);
+			spin_unlock(&l_mg->gc_lock);
+
+			kfree(line->map_bitmap);
+			kfree(line->l2p_bitmap);
+			line->map_bitmap = NULL;
+			line->l2p_bitmap = NULL;
+			line->snapshot = NULL;
+			line->smeta = NULL;
+		}
+		else
+		{
+			if (open_lines > 1)
+				pr_err("pblk: failed to recover L2P\n");
+
+			open_lines++;
+			line->meta_line = meta_line;
+			data_line = line;
+		}
+	}
+	goto recov_end;
+
+recov_from_emeta:
 	/* Verify closed blocks and recover this portion of L2P table*/
 	list_for_each_entry_safe(line, tline, &recov_list, list)
 	{
@@ -1085,6 +1205,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 		}
 	}
 
+recov_end:
 	spin_lock(&l_mg->free_lock);
 	if (!open_lines)
 	{

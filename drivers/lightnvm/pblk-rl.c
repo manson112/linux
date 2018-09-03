@@ -95,16 +95,19 @@ unsigned long pblk_rl_nr_user_free_blks(struct pblk_rl *rl)
 }
 
 static void __pblk_rl_update_rates(struct pblk_rl *rl,
-				   unsigned long free_blocks)
+								   unsigned long free_blocks)
 {
 	struct pblk *pblk = container_of(rl, struct pblk, rl);
 	int max = rl->rb_budget;
 
-	if (free_blocks >= rl->high) {
+	if (free_blocks >= rl->high)
+	{
 		rl->rb_user_max = max;
 		rl->rb_gc_max = 0;
 		rl->rb_state = PBLK_RL_HIGH;
-	} else if (free_blocks < rl->high) {
+	}
+	else if (free_blocks < rl->high)
+	{
 		int shift = rl->high_pw - rl->rb_windows_pw;
 		int user_windows = free_blocks >> shift;
 		int user_max = user_windows << PBLK_MAX_REQ_ADDRS_PW;
@@ -112,7 +115,8 @@ static void __pblk_rl_update_rates(struct pblk_rl *rl,
 		rl->rb_user_max = user_max;
 		rl->rb_gc_max = max - user_max;
 
-		if (free_blocks <= rl->rsv_blocks) {
+		if (free_blocks <= rl->rsv_blocks)
+		{
 			rl->rb_user_max = 0;
 			rl->rb_gc_max = max;
 		}
@@ -147,7 +151,7 @@ void pblk_rl_free_lines_inc(struct pblk_rl *rl, struct pblk_line *line)
 }
 
 void pblk_rl_free_lines_dec(struct pblk_rl *rl, struct pblk_line *line,
-			    bool used)
+							bool used)
 {
 	int blk_in_line = atomic_read(&line->blk_in_line);
 	int free_blocks;
@@ -156,7 +160,7 @@ void pblk_rl_free_lines_dec(struct pblk_rl *rl, struct pblk_line *line,
 
 	if (used)
 		free_blocks = atomic_sub_return(blk_in_line,
-							&rl->free_user_blocks);
+										&rl->free_user_blocks);
 	else
 		free_blocks = atomic_read(&rl->free_user_blocks);
 
@@ -199,7 +203,7 @@ void pblk_rl_init(struct pblk_rl *rl, int budget)
 	unsigned int rb_windows;
 
 	/* Consider sectors used for metadata */
-	sec_meta = (lm->smeta_sec + lm->emeta_sec[0]) * l_mg->nr_free_lines;
+	sec_meta = (lm->smeta_sec + lm->emeta_sec[0] + lm->snapshot_sec) * l_mg->nr_free_lines;
 	blk_meta = DIV_ROUND_UP(sec_meta, geo->clba);
 
 	rl->high = pblk->op_blks - blk_meta - lm->blk_per_line;
