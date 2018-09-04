@@ -952,7 +952,6 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 	struct pblk_line_meta *lm = &pblk->lm;
 	struct bio *bio;
 	struct nvm_rq rqd;
-	struct pblk_snapshot *snapshot; /**/
 	__le64 *lba_list = NULL;
 	int i, ret;
 	int cmd_op, bio_op;
@@ -984,7 +983,7 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 	rqd.ppa_list = rqd.meta_list + pblk_dma_meta_size;
 	rqd.dma_ppa_list = rqd.dma_meta_list + pblk_dma_meta_size;
 	//
-	bio = bio_map_kern(dev->q, snapshot, lm->snapshot_len, GFP_KERNEL);
+	bio = bio_map_kern(dev->q, line->snapshot, lm->snapshot_len, GFP_KERNEL);
 
 	if (IS_ERR(bio))
 	{

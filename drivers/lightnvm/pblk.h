@@ -825,6 +825,7 @@ u64 pblk_line_smeta_start(struct pblk *pblk, struct pblk_line *line);
 int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line);
 int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
 						 void *emeta_buf);
+int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line);
 int pblk_blk_erase_async(struct pblk *pblk, struct ppa_addr erase_ppa);
 void pblk_line_put(struct kref *ref);
 void pblk_line_put_wq(struct kref *ref);
@@ -898,6 +899,7 @@ void pblk_submit_rec(struct work_struct *work);
 struct pblk_line *pblk_recov_l2p(struct pblk *pblk);
 int pblk_recov_pad(struct pblk *pblk);
 int pblk_recov_check_emeta(struct pblk *pblk, struct line_emeta *emeta);
+int pblk_recov_check_snapshot(struct pblk *pblk, struct line_snapshot *snapshot_buf);
 int pblk_recov_setup_rq(struct pblk *pblk, struct pblk_c_ctx *c_ctx,
 						struct pblk_rec_ctx *recovery, u64 *comp_bits,
 						unsigned int comp);

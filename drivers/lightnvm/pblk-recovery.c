@@ -145,7 +145,7 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk, struct pblk_line *lin
 	struct line_snapshot *snapshot_buf = snapshot->buf;
 	__le64 *lba_list;
 	u64 data_start, data_end;
-	u64 nr_valid_lbas, nr_lbas = 0;
+	u64 nr_lbas = 0;
 	u64 i;
 
 	lba_list = snapshot_buf->line_trans_map;
