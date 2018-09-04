@@ -1049,6 +1049,8 @@ add_smeta_page:
 	// test_end
 
 	smeta_len = sizeof(struct line_smeta) + lm->lun_bitmap_len;
+	printk("pblk-init.c[1052]:[pblk_line_meta_init]:smeta_len = %u = %x\n", smeta_len, smeta_len);
+
 	if (smeta_len > lm->smeta_len)
 	{
 		i++;
@@ -1056,7 +1058,7 @@ add_smeta_page:
 	}
 
 	// test_print
-	printk("------------------------------Get emeta size--------------------------------\n");
+	printk("------------------------------Get snapshot size--------------------------------\n");
 	// test_end
 
 	/* Calculate necessary pages for emeta. See comment over struct
@@ -1066,18 +1068,20 @@ add_snapshot_page:
 	lm->snapshot_sec = i * geo->ws_opt;
 	lm->snapshot_len = lm->snapshot_sec * geo->csecs;
 	// test_print
-	printk("pblk-init.c[1049]:[pblk_line_meta_init]:lm->snapshot_sec[0] = i*geo->ws_opt = %d * %u = %u = %x\n", i, geo->ws_opt, lm->snapshot_sec, lm->snapshot_sec);
-	printk("pblk-init.c[1050]:[pblk_line_meta_init]:lm->snapshot_len[0] = lm->snapshot_sec*geo->csecs = %u * %u = %u = %x\n", lm->snapshot_sec, geo->csecs, lm->snapshot_len, lm->snapshot_len);
+	printk("pblk-init.c[1071]:[pblk_line_meta_init]:lm->snapshot_sec[0] = i*geo->ws_opt = %d * %u = %u = %x\n", i, geo->ws_opt, lm->snapshot_sec, lm->snapshot_sec);
+	printk("pblk-init.c[1072]:[pblk_line_meta_init]:lm->snapshot_len[0] = lm->snapshot_sec*geo->csecs = %u * %u = %u = %x\n", lm->snapshot_sec, geo->csecs, lm->snapshot_len, lm->snapshot_len);
 	// test_end
 	snapshot_len = sizeof(struct line_snapshot) + lm->sec_bitmap_len;
-	printk("pblk-init.c[1053]:[pblk_line_meta_init]:snapshot_len = %u = %x\n", snapshot_len, snapshot_len);
+	printk("pblk-init.c[1075]:[pblk_line_meta_init]:snapshot_len = %u = %x\n", snapshot_len, snapshot_len);
 
 	if (snapshot_len > lm->snapshot_len)
 	{
 		i++;
 		goto add_snapshot_page;
 	}
-
+	// test_print
+	printk("------------------------------Get emeta size--------------------------------\n");
+	// test_end
 	i = 1;
 add_emeta_page:
 	lm->emeta_sec[0] = i * geo->ws_opt;

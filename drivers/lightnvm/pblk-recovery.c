@@ -142,7 +142,7 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk, struct pblk_line *lin
 	struct nvm_geo *geo = &dev->geo;
 	struct pblk_line_meta *lm = &pblk->lm;
 	struct pblk_snapshot *snapshot = line->snapshot;
-	struct line_snapshot *snapshot_buf = snapshot->buf;
+	struct line_snapshot *snapshot_buf = (struct line_snapshot *)snapshot;
 	__le64 *lba_list;
 	u64 data_start, data_end;
 	u64 nr_lbas = 0;
@@ -990,6 +990,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 	struct pblk_smeta *smeta;
 	struct pblk_emeta *emeta;
 	struct line_smeta *smeta_buf;
+	struct pblk_snapshot *snapshot;
+	struct line_snapshot *snapshot_buf;
 	__le64 *lba_list;
 	int found_lines = 0, recovered_lines = 0, open_lines = 0;
 	int is_next = 0;
@@ -1050,8 +1052,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 
 		if (memcmp(pblk->instance_uuid, smeta_buf->header.uuid, 16))
 		{
-			pr_debug("pblk: ignore line %u due to uuid mismatch\n",
-					 i);
+			pr_debug("pblk: ignore line %u due to uuid mismatch\n", i);
 			continue;
 		}
 
@@ -1089,6 +1090,10 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 
 		goto out;
 	}
+
+	snapshot = line->snapshot;
+	snapshot_buf = (struct line_snapshot *)snapshot;
+
 	list_for_each_entry_safe(line, tline, &recov_list, list)
 	{
 		if (pblk_line_read_snapshot(pblk, line))
@@ -1096,12 +1101,12 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 			goto recov_from_emeta;
 		}
 
-		if (pblk_recov_check_snapshot(pblk, line->snapshot->buf))
+		if (pblk_recov_check_snapshot(pblk, snapshot_buf))
 		{
 			goto recov_from_emeta;
 		}
 
-		lba_list = line->snapshot->buf->line_trans_map;
+		lba_list = snapshot_buf->line_trans_map;
 		if (!lba_list)
 		{
 			goto recov_from_emeta;
