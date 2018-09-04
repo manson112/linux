@@ -1395,14 +1395,7 @@ static int pblk_line_prepare(struct pblk *pblk, struct pblk_line *line)
 
 	/* Bad blocks do not need to be erased */
 	bitmap_copy(line->erase_bitmap, line->blk_bitmap, lm->blk_per_line);
-	/* add l2p bitmap */
-	line->l2p_bitmap = kzalloc(lm->sec_bitmap_len, GFP_ATOMIC);
-	if (!line->l2p_bitmap)
-	{
-		kfree(line->invalid_bitmap);
-		kfree(line->map_bitmap);
-		return -ENOMEM;
-	}
+
 	spin_lock(&line->lock);
 
 	/* If we have not written to this line, we need to mark up free chunks

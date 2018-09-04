@@ -855,7 +855,25 @@ static int pblk_alloc_line_meta(struct pblk *pblk, struct pblk_line *line)
 		kfree(line->blk_bitmap);
 		return -ENOMEM;
 	}
+	/* add l2p bitmap */
+	line->l2p_bitmap = kzalloc(lm->sec_bitmap_len, GFP_ATOMIC);
+	if (!line->l2p_bitmap)
+	{
+		kfree(line->chks);
+		kfree(line->erase_bitmap);
+		kfree(line->blk_bitmap);
+		return -ENOMEM;
+	}
 
+	line->snapshot = kmalloc(lm->smeta_len, GFP_KERNEL);
+	if (!line->snapshot)
+	{
+		kfree(line->l2p_bitmap);
+		kfree(line->chks);
+		kfree(line->erase_bitmap);
+		kfree(line->blk_bitmap);
+		return -ENOMEM;
+	}
 	return 0;
 }
 
