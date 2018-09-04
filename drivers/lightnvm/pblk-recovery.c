@@ -1091,7 +1091,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 	}
 	list_for_each_entry_safe(line, tline, &recov_list, list)
 	{
-		if (pblk_line_read_snapshot(pblk, line, line->snapshot->buf))
+		if (pblk_line_read_snapshot(pblk, line))
 		{
 			goto recov_from_emeta;
 		}
