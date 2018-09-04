@@ -1184,7 +1184,7 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 	struct line_emeta *emeta_buf = emeta->buf;
 	struct line_smeta *smeta_buf = (struct line_smeta *)line->smeta;
 	struct pblk_snapshot *snapshot = line->snapshot;
-	struct line_snapshot *snapshot_buf = snapshot->buf;
+	struct line_snapshot *snapshot_buf = (struct line_snapshot *)snapshot;
 	int nr_blk_line;
 
 	/* After erasing the line, new bad blocks might appear and we risk
