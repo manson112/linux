@@ -1021,7 +1021,7 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 	ret = pblk_submit_io_sync(pblk, &rqd);
 	if (ret)
 	{
-		pr_err("pblk: smeta I/O submission failed: %d\n", ret);
+		pr_err("pblk: snapshot I/O submission failed: %d\n", ret);
 		bio_put(bio);
 		goto free_ppa_list;
 	}
@@ -1311,7 +1311,7 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 
 	bitmap_set(line->invalid_bitmap, off, lm->snapshot_sec);
 	line->sec_in_line -= lm->snapshot_sec;
-	line->cur_sec = off + lm->snapshot_len;
+	line->cur_sec = off + lm->snapshot_sec;
 
 	/* Mark emeta metadata sectors as bad sectors. We need to consider bad
 	 * blocks to make sure that there are enough sectors to store emeta

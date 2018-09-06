@@ -185,8 +185,6 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk, struct pblk_line *lin
 		nr_lbas++;
 	}
 
-	line->left_msecs = 0;
-
 	return 0;
 }
 static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
