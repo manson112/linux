@@ -897,7 +897,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 
 		rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
 		//test_print
-		printk("pblk-core.c[897]:pblk_line_submit_smeta_io:line[%u].sector[%d] smeta start grp=%lu , pu=%lu , chk=%lu , sec=%lu\n", line->id, i, rqd.ppa_list[i].m.grp, rqd.ppa_list[i].m.pu, rqd.ppa_list[i].m.chk, rqd.ppa_list[i].m.sec);
+		printk("pblk-core.c[897]:pblk_line_submit_smeta_io:line[%u].sector[%d] smeta start grp=%lu , pu=%lu , chk=%lu , sec=%lu\n", line->id, i, (unsigned long)rqd.ppa_list[i].m.grp, (unsigned long)rqd.ppa_list[i].m.pu, (unsigned long)rqd.ppa_list[i].m.chk, (unsigned long)rqd.ppa_list[i].m.sec);
 		//test_end
 		if (dir == PBLK_WRITE)
 		{
