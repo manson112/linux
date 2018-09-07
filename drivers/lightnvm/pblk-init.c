@@ -1396,11 +1396,11 @@ static void *pblk_init(struct nvm_tgt_dev *dev, struct gendisk *tdisk,
 	blk_queue_max_discard_sectors(tqueue, UINT_MAX >> 9);
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, tqueue);
 
-	pr_info("pblk(%s): luns:%u, lines:%d, secs:%llu, buf entries:%u, all_chunks=%d, total_secs=%lu, chunks_per_lun=%u, sectors_per_chunk=%d, num_channel=%d, num_lun_per_channel=%d\n",
+	pr_info("pblk(%s): luns:%u, lines:%d, secs:%llu, buf entries:%u, all_chunks=%d, total_secs=%lu, chunks_per_lun=%u, sectors_per_chunk=%d, num_channel=%d, num_lun_per_channel=%d, capability=%u\n",
 			tdisk->disk_name,
 			geo->all_luns, pblk->l_mg.nr_lines,
 			(unsigned long long)pblk->rl.nr_secs,
-			pblk->rwb.nr_entries, geo->all_chunks, (unsigned long)geo->total_secs, geo->num_chk, geo->clba, geo->num_ch, geo->num_lun);
+			pblk->rwb.nr_entries, geo->all_chunks, (unsigned long)geo->total_secs, geo->num_chk, geo->clba, geo->num_ch, geo->num_lun, geo->mccap);
 
 	wake_up_process(pblk->writer_ts);
 
