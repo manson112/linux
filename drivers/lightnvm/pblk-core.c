@@ -1309,6 +1309,7 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
 	/* mark snapshot as bad block */
 	off = line->cur_sec;
 
+	bitmap_set(line->map_bitmap, off, lm->snapshot_sec);
 	bitmap_set(line->invalid_bitmap, off, lm->snapshot_sec);
 	line->sec_in_line -= lm->snapshot_sec;
 	line->cur_sec = off + lm->snapshot_sec;
