@@ -1400,7 +1400,7 @@ static void *pblk_init(struct nvm_tgt_dev *dev, struct gendisk *tdisk,
 			tdisk->disk_name,
 			geo->all_luns, pblk->l_mg.nr_lines,
 			(unsigned long long)pblk->rl.nr_secs,
-			pblk->rwb.nr_entries, geo->all_chunks, (unsigned long)geo->total_secs, geo->num_chk, geo->clba, geo->num_ch, geo->num_lun, geo->mccap);
+			pblk->rwb.nr_entries, geo->all_chunks, (unsigned long)geo->total_secs, geo->num_chk, geo->clba, geo->num_ch, geo->num_lun, (unsigned long)pblk_capacity(pblk));
 
 	wake_up_process(pblk->writer_ts);
 
