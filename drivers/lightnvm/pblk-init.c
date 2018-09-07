@@ -865,7 +865,7 @@ static int pblk_alloc_line_meta(struct pblk *pblk, struct pblk_line *line)
 		return -ENOMEM;
 	}
 
-	line->snapshot = kmalloc(lm->smeta_len, GFP_KERNEL);
+	line->snapshot = kmalloc(lm->snapshot_len, GFP_KERNEL);
 	if (!line->snapshot)
 	{
 		kfree(line->l2p_bitmap);
