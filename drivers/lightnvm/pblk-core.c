@@ -1978,7 +1978,8 @@ void pblk_line_close_meta(struct pblk *pblk, struct pblk_line *line)
 	wa->pad = cpu_to_le64(atomic64_read(&pblk->pad_wa));
 	wa->gc = cpu_to_le64(atomic64_read(&pblk->gc_wa));
 
-	emeta_buf->nr_valid_lbas = cpu_to_le64(line->nr_valid_lbas);
+	/* minus lm->snapshot_sec */
+	emeta_buf->nr_valid_lbas = cpu_to_le64(line->nr_valid_lbas) - lm->snapshot_sec;
 	emeta_buf->crc = cpu_to_le32(pblk_calc_emeta_crc(pblk, emeta_buf));
 
 	spin_lock(&l_mg->close_lock);
