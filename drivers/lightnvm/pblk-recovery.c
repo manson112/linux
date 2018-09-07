@@ -206,7 +206,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 	/* add snapshot sectors */
 	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec + lm->snapshot_sec;
 	data_end = line->emeta_ssec;
-	nr_valid_lbas = le64_to_cpu(emeta_buf->nr_valid_lbas) - lm->snapshot_sec;
+	nr_valid_lbas = le64_to_cpu(emeta_buf->nr_valid_lbas);
 
 	for (i = data_start; i < data_end; i++)
 	{
