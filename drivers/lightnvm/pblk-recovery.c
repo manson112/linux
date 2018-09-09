@@ -222,19 +222,19 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 
 		ppa = addr_to_gen_ppa(pblk, i, line->id);
 		pos = pblk_ppa_to_pos(geo, ppa);
-		printk("pblk_recov_l2p_from_emeta: [%llu] pu=%lu, chk=%lu, sec=%lu\n", i, (unsigned long)ppa.m.pu, (unsigned long)ppa.m.chk, (unsigned long)ppa.m.sec);
-		printk("pblk_recov_l2p_from_emeta: pos = %d\n", pos);
+		// printk("pblk_recov_l2p_from_emeta: [%llu] pu=%lu, chk=%lu, sec=%lu\n", i, (unsigned long)ppa.m.pu, (unsigned long)ppa.m.chk, (unsigned long)ppa.m.sec);
+		// printk("pblk_recov_l2p_from_emeta: pos = %d\n", pos);
 
 		/* Do not update bad blocks */
 		if (test_bit(pos, line->blk_bitmap))
 		{
-			printk("pblk_recov_l2p_from_emeta: pos = %d is bad block\n", pos);
+			// printk("pblk_recov_l2p_from_emeta: pos = %d is bad block\n", pos);
 			continue;
 		}
 
 		if (le64_to_cpu(lba_list[i]) == ADDR_EMPTY)
 		{
-			printk("pblk_recov_l2p_from_emeta: lba_list[%llu] is ADDR_EMPTY\n", i);
+			// printk("pblk_recov_l2p_from_emeta: lba_list[%llu] is ADDR_EMPTY\n", i);
 			spin_lock(&line->lock);
 			if (test_and_set_bit(i, line->invalid_bitmap))
 				WARN_ONCE(1, "pblk: rec. double invalidate:\n");
@@ -244,7 +244,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 
 			continue;
 		}
-		printk("pblk_recov_l2p_from_emeta: before pblk_update_map\n");
+		// printk("pblk_recov_l2p_from_emeta: before pblk_update_map\n");
 		pblk_update_map(pblk, le64_to_cpu(lba_list[i]), ppa);
 		nr_lbas++;
 	}
