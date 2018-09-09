@@ -131,6 +131,7 @@ int pblk_recov_check_snapshot(struct pblk *pblk, struct line_snapshot *snapshot_
 	u32 crc;
 
 	crc = pblk_calc_snapshot_crc(pblk, snapshot_buf);
+	printk("snapshot_buf->crc = %u\n", le32_to_cpu(snapshot_buf->crc));
 	if (le32_to_cpu(snapshot_buf->crc) != crc)
 		return 1;
 
@@ -206,7 +207,13 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 	/* add snapshot sectors */
 	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
 	data_end = line->emeta_ssec;
+
+	printk("pblk_recov_l2p_from_emeta: data_start = %llu\n", data_start);
+	printk("pblk_recov_l2p_from_emeta: data_end = %llu\n", data_end);
+
 	nr_valid_lbas = le64_to_cpu(emeta_buf->nr_valid_lbas);
+
+	printk("pblk_recov_l2p_from_emeta: nr_valid_lbas = %llu\n", nr_valid_lbas);
 
 	for (i = data_start; i < data_end; i++)
 	{
@@ -215,13 +222,19 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 
 		ppa = addr_to_gen_ppa(pblk, i, line->id);
 		pos = pblk_ppa_to_pos(geo, ppa);
+		printk("pblk_recov_l2p_from_emeta: [%d] pu=%lu, chk=%lu, sec=%lu\n", i, (unsigned long)ppa.m.pu, (unsigned long)ppa.m.chk, (unsigned long)ppa.m.sec);
+		printk("pblk_recov_l2p_from_emeta: pos = %d\n", pos);
 
 		/* Do not update bad blocks */
 		if (test_bit(pos, line->blk_bitmap))
+		{
+			printk("pblk_recov_l2p_from_emeta: pos = %d is bad block\n", pos);
 			continue;
+		}
 
 		if (le64_to_cpu(lba_list[i]) == ADDR_EMPTY)
 		{
+			printk("pblk_recov_l2p_from_emeta: lba_list[%d] is ADDR_EMPTY\n", i);
 			spin_lock(&line->lock);
 			if (test_and_set_bit(i, line->invalid_bitmap))
 				WARN_ONCE(1, "pblk: rec. double invalidate:\n");
@@ -231,10 +244,11 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 
 			continue;
 		}
-
+		printk("pblk_recov_l2p_from_emeta: before pblk_update_map\n");
 		pblk_update_map(pblk, le64_to_cpu(lba_list[i]), ppa);
 		nr_lbas++;
 	}
+	printk("pblk_recov_l2p_from_emeta: nr_lbas = %llu\n", nr_lbas);
 
 	if (nr_valid_lbas != nr_lbas)
 		pr_err("pblk: line %d - inconsistent lba list(%llu/%llu)\n",
