@@ -1124,8 +1124,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 		}
 		if (pblk_line_is_full(line))
 		{
-			printk("pblk_recov_l2p pblk_line_is_full = true\n");
 			struct list_head *move_list;
+			printk("pblk_recov_l2p pblk_line_is_full = true\n");
 
 			spin_lock(&line->lock);
 			line->state = PBLK_LINESTATE_CLOSED;
