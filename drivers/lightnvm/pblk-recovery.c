@@ -204,7 +204,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 		return 1;
 
 	/* add snapshot sectors */
-	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec + lm->snapshot_sec;
+	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
 	data_end = line->emeta_ssec;
 	nr_valid_lbas = le64_to_cpu(emeta_buf->nr_valid_lbas);
 
@@ -236,7 +236,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 		nr_lbas++;
 	}
 
-	if (nr_valid_lbas != nr_lbas)
+	if (nr_valid_lbas != nr_lbas - lm->snapshot_sec)
 		pr_err("pblk: line %d - inconsistent lba list(%llu/%llu)\n",
 			   line->id, nr_valid_lbas, nr_lbas);
 
