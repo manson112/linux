@@ -205,7 +205,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 		return 1;
 
 	/* add snapshot sectors */
-	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
+	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec + lm->snapshot_sec;
 	data_end = line->emeta_ssec;
 
 	printk("pblk_recov_l2p_from_emeta: data_start = %llu\n", data_start);
