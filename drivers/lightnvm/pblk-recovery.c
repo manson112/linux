@@ -236,7 +236,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 		nr_lbas++;
 	}
 
-	if (nr_valid_lbas != nr_lbas - lm->snapshot_sec)
+	if (nr_valid_lbas != nr_lbas)
 		pr_err("pblk: line %d - inconsistent lba list(%llu/%llu)\n",
 			   line->id, nr_valid_lbas, nr_lbas);
 
@@ -1094,13 +1094,17 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 
 	list_for_each_entry_safe(line, tline, &recov_list, list)
 	{
+		printk("pblk_recov_l2p before pblk_read_snapshot \n");
+
 		if (pblk_line_read_snapshot(pblk, line))
 		{
+			printk("pblk_recov_l2p fail pblk_read_snapshot \n");
 			goto recov_from_emeta;
 		}
-
+		printk("pblk_recov_l2p before pblk_recov_check_snapshot \n");
 		if (pblk_recov_check_snapshot(pblk, snapshot_buf))
 		{
+			printk("pblk_recov_l2p fail pblk_recov_check_snapshot \n");
 			goto recov_from_emeta;
 		}
 
@@ -1112,12 +1116,15 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 
 		line->emeta_ssec = pblk_line_emeta_start(pblk, line);
 
+		printk("pblk_recov_l2p before pblk_recov_l2p_from_snapshot \n");
 		if (pblk_recov_l2p_from_snapshot(pblk, line))
 		{
+			printk("pblk_recov_l2p fail pblk_recov_l2p_from_snapshot \n");
 			goto recov_from_emeta;
 		}
 		if (pblk_line_is_full(line))
 		{
+			printk("pblk_recov_l2p pblk_line_is_full = true\n");
 			struct list_head *move_list;
 
 			spin_lock(&line->lock);
@@ -1158,14 +1165,20 @@ recov_from_emeta:
 		line->emeta = emeta;
 		memset(line->emeta->buf, 0, lm->emeta_len[0]);
 
+		printk("pblk_recov_l2p before pblk_line_read_emeta \n");
+
 		if (pblk_line_read_emeta(pblk, line, line->emeta->buf))
 		{
+			printk("pblk_recov_l2p fail pblk_line_read_emeta \n");
+
 			pblk_recov_l2p_from_oob(pblk, line);
 			goto next;
 		}
+		printk("pblk_recov_l2p before pblk_recov_check_emeta \n");
 
 		if (pblk_recov_check_emeta(pblk, line->emeta->buf))
 		{
+			printk("pblk_recov_l2p fail pblk_recov_check_emeta \n");
 			pblk_recov_l2p_from_oob(pblk, line);
 			goto next;
 		}
@@ -1175,8 +1188,13 @@ recov_from_emeta:
 
 		pblk_recov_wa_counters(pblk, line->emeta->buf);
 
+		printk("pblk_recov_l2p before pblk_recov_l2p_from_emeta \n");
+
 		if (pblk_recov_l2p_from_emeta(pblk, line))
+		{
+			printk("pblk_recov_l2p fail pblk_recov_l2p_from_emeta \n");
 			pblk_recov_l2p_from_oob(pblk, line);
+		}
 
 	next:
 		if (pblk_line_is_full(line))

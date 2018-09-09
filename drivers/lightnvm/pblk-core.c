@@ -888,7 +888,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 	rqd.flags = flags;
 	rqd.nr_ppas = lm->smeta_sec;
 	//test_print
-	printk("------------------------------Get line start ppa--------------------------------\n");
+	//printk("------------------------------Get line start ppa--------------------------------\n");
 	//test_end
 
 	for (i = 0; i < lm->smeta_sec; i++, paddr++)
@@ -897,7 +897,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 
 		rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
 		//test_print
-		printk("pblk-core.c[897]:pblk_line_submit_smeta_io:line[%u].sector[%d] smeta start grp=%lu , pu=%lu , chk=%lu , sec=%lu\n", line->id, i, (unsigned long)rqd.ppa_list[i].m.grp, (unsigned long)rqd.ppa_list[i].m.pu, (unsigned long)rqd.ppa_list[i].m.chk, (unsigned long)rqd.ppa_list[i].m.sec);
+		//printk("pblk-core.c[897]:pblk_line_submit_smeta_io:line[%u].sector[%d] smeta start grp=%lu , pu=%lu , chk=%lu , sec=%lu\n", line->id, i, (unsigned long)rqd.ppa_list[i].m.grp, (unsigned long)rqd.ppa_list[i].m.pu, (unsigned long)rqd.ppa_list[i].m.chk, (unsigned long)rqd.ppa_list[i].m.sec);
 		//test_end
 		if (dir == PBLK_WRITE)
 		{
@@ -941,7 +941,7 @@ int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line)
 	u64 bpaddr = pblk_line_smeta_start(pblk, line);
 
 	//test_print
-	printk("pblk-core.c[944]:pblk_line_read_smeta:pblk_line_smeta_start = %llu = %llx\n", bpaddr, bpaddr);
+	//printk("pblk-core.c[944]:pblk_line_read_smeta:pblk_line_smeta_start = %llu = %llx\n", bpaddr, bpaddr);
 	//test_end
 
 	return pblk_line_submit_smeta_io(pblk, line, bpaddr, PBLK_READ_RECOV);
@@ -957,6 +957,7 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 	int cmd_op, bio_op;
 	int flags;
 
+	printk("pblk_line_submit_snapshot_io start\n");
 	if (dir == PBLK_WRITE)
 	{
 		bio_op = REQ_OP_WRITE;
@@ -1018,7 +1019,12 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 			meta_list[i].lba = lba_list[paddr] = addr_empty;
 		}
 	}
+	printk("pblk_line_submit_snapshot_io before pblk_submit_io_sync\n");
+
 	ret = pblk_submit_io_sync(pblk, &rqd);
+
+	printk("pblk_line_submit_snapshot_io after pblk_submit_io_sync result = %d\n", ret);
+
 	if (ret)
 	{
 		pr_err("pblk: snapshot I/O submission failed: %d\n", ret);
@@ -1030,6 +1036,8 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 
 	if (rqd.error)
 	{
+		printk("pblk_line_submit_snapshot_io after pblk_submit_io_sync error\n");
+
 		if (dir == PBLK_WRITE)
 			pblk_log_write_err(pblk, &rqd);
 		else if (dir == PBLK_READ)
