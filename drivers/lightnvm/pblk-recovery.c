@@ -1118,7 +1118,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 		printk("--- line trans map ---");
 		for (i = 0; i < sizeof(snapshot_buf->line_trans_map) / sizeof(__le64); i++)
 		{
-			printk("[%d] %llu | ", i, le64_to_cpu(snapshot_buf->line_trans_map[i]));
+			if (snapshot_buf->line_trans_map[i])
+				printk("[%d] %llu | ", i, le64_to_cpu(snapshot_buf->line_trans_map[i]));
 		}
 		printk("\n");
 		printk("pblk_recov_l2p before pblk_recov_check_snapshot \n");
