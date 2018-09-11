@@ -644,7 +644,7 @@ u64 pblk_alloc_page(struct pblk *pblk, struct pblk_line *line, int nr_secs)
 	 */
 	spin_lock(&line->lock);
 	addr = __pblk_alloc_page(pblk, line, nr_secs);
-	printk("pblk_alloc_page: %llu\n", (unsigned long long)addr);
+	//printk("pblk_alloc_page: %llu\n", (unsigned long long)addr);
 	line->left_msecs -= nr_secs;
 	WARN(line->left_msecs < 0, "pblk: page allocation out of bounds\n");
 	spin_unlock(&line->lock);
