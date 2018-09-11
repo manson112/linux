@@ -1385,7 +1385,7 @@ static int pblk_prepare_new_line(struct pblk *pblk, struct pblk_line *line)
 	return blk_to_erase;
 }
 
-static int (struct pblk *pblk, struct pblk_line *line)
+static int pblk_line_prepare(struct pblk *pblk, struct pblk_line *line)
 {
 	struct pblk_line_meta *lm = &pblk->lm;
 	int blk_to_erase;
@@ -1977,7 +1977,7 @@ void pblk_line_close_meta(struct pblk *pblk, struct pblk_line *line)
 	struct pblk_emeta *emeta = line->emeta;
 	struct line_emeta *emeta_buf = emeta->buf;
 	struct pblk_snapshot *snapshot = line->snapshot;
-	struct line_snapshot *snapshot_buf = (struct line_snapshot *)pblk_snapshot;
+	struct line_snapshot *snapshot_buf = (struct line_snapshot *)snapshot;
 	struct wa_counters *wa = emeta_to_wa(lm, emeta_buf);
 
 	/* No need for exact vsc value; avoid a big line lock and take aprox. */
