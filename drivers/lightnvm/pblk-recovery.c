@@ -1075,6 +1075,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk)
 		line->seq_nr = le64_to_cpu(smeta_buf->seq_nr);
 		spin_unlock(&line->lock);
 
+		printk("pblk_recov_l2p:[%d] line->id = %u / line->type = %d / line->seq_nr = %u\n", i, line->id, line->type, line->seq_nr);
+
 		/* Update general metadata */
 		spin_lock(&l_mg->free_lock);
 		if (line->seq_nr >= l_mg->d_seq_nr)
