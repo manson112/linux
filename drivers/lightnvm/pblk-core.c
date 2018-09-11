@@ -644,6 +644,7 @@ u64 pblk_alloc_page(struct pblk *pblk, struct pblk_line *line, int nr_secs)
 	 */
 	spin_lock(&line->lock);
 	addr = __pblk_alloc_page(pblk, line, nr_secs);
+	printk("pblk_alloc_page: %llu\n", (unsigned long long)addr);
 	line->left_msecs -= nr_secs;
 	WARN(line->left_msecs < 0, "pblk: page allocation out of bounds\n");
 	spin_unlock(&line->lock);
@@ -2269,6 +2270,7 @@ void pblk_lookup_l2p_rand(struct pblk *pblk, struct ppa_addr *ppas,
 	for (i = 0; i < nr_secs; i++)
 	{
 		lba = lba_list[i];
+		printk("pblk_lookup_l2p_rand: lba_list[%d]=%llu\n", i, (unsigned long long)lba);
 		if (lba != ADDR_EMPTY)
 		{
 			/* logic error: lba out-of-bounds. Ignore update */
