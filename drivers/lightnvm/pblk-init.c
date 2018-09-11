@@ -835,6 +835,8 @@ static long pblk_setup_line_meta(struct pblk *pblk, struct pblk_line *line,
 static int pblk_alloc_line_meta(struct pblk *pblk, struct pblk_line *line)
 {
 	struct pblk_line_meta *lm = &pblk->lm;
+	struct line_snapshot *snapshot_buf;
+	struct __le64 *snapshot_trans_map;
 
 	line->blk_bitmap = kzalloc(lm->blk_bitmap_len, GFP_KERNEL);
 	if (!line->blk_bitmap)
@@ -874,6 +876,18 @@ static int pblk_alloc_line_meta(struct pblk *pblk, struct pblk_line *line)
 		kfree(line->blk_bitmap);
 		return -ENOMEM;
 	}
+	snapshot_trans_map = kmalloc(lm->sec_bitmap_len, GFP_KERNEL);
+	line->snapshot->buf->line_trans_map = snapshot_trans_map;
+	if (!line->snapshot->buf->line_trans_map)
+	{
+		kfree(line->snapshot);
+		kfree(line->l2p_bitmap);
+		kfree(line->chks);
+		kfree(line->erase_bitmap);
+		kfree(line->blk_bitmap);
+		return -ENOMEM;
+	}
+
 	return 0;
 }
 
