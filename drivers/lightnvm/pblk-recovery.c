@@ -208,12 +208,12 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 	data_start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec + lm->snapshot_sec;
 	data_end = line->emeta_ssec;
 
-	printk("pblk_recov_l2p_from_emeta: data_start = %llu\n", data_start);
-	printk("pblk_recov_l2p_from_emeta: data_end = %llu\n", data_end);
+	// printk("pblk_recov_l2p_from_emeta: data_start = %llu\n", data_start);
+	// printk("pblk_recov_l2p_from_emeta: data_end = %llu\n", data_end);
 
 	nr_valid_lbas = le64_to_cpu(emeta_buf->nr_valid_lbas);
 
-	printk("pblk_recov_l2p_from_emeta: nr_valid_lbas = %llu\n", nr_valid_lbas);
+	// printk("pblk_recov_l2p_from_emeta: nr_valid_lbas = %llu\n", nr_valid_lbas);
 
 	for (i = data_start; i < data_end; i++)
 	{
@@ -248,7 +248,7 @@ static int pblk_recov_l2p_from_emeta(struct pblk *pblk, struct pblk_line *line)
 		pblk_update_map(pblk, le64_to_cpu(lba_list[i]), ppa);
 		nr_lbas++;
 	}
-	printk("pblk_recov_l2p_from_emeta: nr_lbas = %llu\n", nr_lbas);
+	// printk("pblk_recov_l2p_from_emeta: nr_lbas = %llu\n", nr_lbas);
 
 	if (nr_valid_lbas != nr_lbas)
 		pr_err("pblk: line %d - inconsistent lba list(%llu/%llu)\n",
@@ -1186,7 +1186,7 @@ recov_from_emeta:
 		line->emeta = emeta;
 		memset(line->emeta->buf, 0, lm->emeta_len[0]);
 
-		printk("pblk_recov_l2p before pblk_line_read_emeta \n");
+		// printk("pblk_recov_l2p before pblk_line_read_emeta \n");
 
 		if (pblk_line_read_emeta(pblk, line, line->emeta->buf))
 		{
@@ -1195,7 +1195,7 @@ recov_from_emeta:
 			pblk_recov_l2p_from_oob(pblk, line);
 			goto next;
 		}
-		printk("pblk_recov_l2p before pblk_recov_check_emeta \n");
+		// printk("pblk_recov_l2p before pblk_recov_check_emeta \n");
 
 		if (pblk_recov_check_emeta(pblk, line->emeta->buf))
 		{
@@ -1209,7 +1209,7 @@ recov_from_emeta:
 
 		pblk_recov_wa_counters(pblk, line->emeta->buf);
 
-		printk("pblk_recov_l2p before pblk_recov_l2p_from_emeta \n");
+		// printk("pblk_recov_l2p before pblk_recov_l2p_from_emeta \n");
 
 		if (pblk_recov_l2p_from_emeta(pblk, line))
 		{
