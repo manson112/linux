@@ -876,9 +876,9 @@ static int pblk_alloc_line_meta(struct pblk *pblk, struct pblk_line *line)
 		kfree(line->blk_bitmap);
 		return -ENOMEM;
 	}
-	snapshot_trans_map = kmalloc(lm->sec_bitmap_len, GFP_KERNEL);
-	line->snapshot->buf->line_trans_map = snapshot_trans_map;
-	if (!line->snapshot->buf->line_trans_map)
+	snapshot_buf = (struct line_snapshot *)line->snapshot;
+	snapshot_buf->line_trans_map = kmalloc(lm->sec_bitmap_len, GFP_KERNEL);
+	if (!snapshot_buf->line_trans_map)
 	{
 		kfree(line->snapshot);
 		kfree(line->l2p_bitmap);
