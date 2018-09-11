@@ -1804,7 +1804,7 @@ void pblk_line_free(struct pblk *pblk, struct pblk_line *line)
 {
 	kfree(line->map_bitmap);
 	kfree(line->invalid_bitmap);
-	kfree(line->l2p_bitmap);
+	// kfree(line->l2p_bitmap);
 
 	*line->vsc = cpu_to_le32(EMPTY_ENTRY);
 
