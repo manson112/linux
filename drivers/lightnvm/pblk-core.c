@@ -1002,7 +1002,7 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 	rqd.nr_ppas = lm->snapshot_sec; /**/
 
 	//test_print
-	printk("------------------------------Get snapshot start ppa--------------------------------\n");
+	// printk("------------------------------Get snapshot start ppa--------------------------------\n");
 	//test_end
 
 	for (i = 0; i < lm->snapshot_sec; i++, paddr++)
@@ -1011,7 +1011,7 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk, struct pblk_line *lin
 
 		rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
 		//test_print
-		printk("pblk-core.c[1013]:pblk_line_submit_snapshot_io:line[%u].sector[%d] snapshot start bpaddr=[%llu] ppa=[%llu] / grp=%lu , pu=%lu , chk=%lu , sec=%lu\n", line->id, i, paddr, (unsigned long long)rqd.ppa_list[i].ppa, (unsigned long)rqd.ppa_list[i].m.grp, (unsigned long)rqd.ppa_list[i].m.pu, (unsigned long)rqd.ppa_list[i].m.chk, (unsigned long)rqd.ppa_list[i].m.sec);
+		// printk("pblk-core.c[1013]:pblk_line_submit_snapshot_io:line[%u].sector[%d] snapshot start bpaddr=[%llu] ppa=[%llu] / grp=%lu , pu=%lu , chk=%lu , sec=%lu\n", line->id, i, paddr, (unsigned long long)rqd.ppa_list[i].ppa, (unsigned long)rqd.ppa_list[i].m.grp, (unsigned long)rqd.ppa_list[i].m.pu, (unsigned long)rqd.ppa_list[i].m.chk, (unsigned long)rqd.ppa_list[i].m.sec);
 		//test_end
 		if (dir == PBLK_WRITE)
 		{
