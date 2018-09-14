@@ -1118,6 +1118,7 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
 
   for (; left_sec > 0;) {
     line = pblk_line_get(pblk);
+    line->snapshot = kmalloc(line->sec_in_line, GFP_KERNEL);
     if (pblk_line_submit_snapshot_io(pblk, line,
                                      (struct line_snapshot *)line->snapshot,
                                      line->sec_in_line, PBLK_WRITE)) {
