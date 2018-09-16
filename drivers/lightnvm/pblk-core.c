@@ -845,8 +845,8 @@ free_rqd_dma:
   nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
   return ret;
 }
-static int pblk_line_write_snapshot(struct pblk *pblk, struct pblk_line *line,
-                                    void *snapshot_buf, u64 paddr) {
+int pblk_line_write_snapshot(struct pblk *pblk, struct pblk_line *line,
+                             void *snapshot_buf, u64 paddr) {
   return pblk_line_submit_snapshot_io(pblk, line, snapshot_buf, paddr,
                                       PBLK_WRITE);
 }
