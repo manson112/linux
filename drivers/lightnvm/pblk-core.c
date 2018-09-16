@@ -456,6 +456,7 @@ int pblk_submit_io_sync(struct pblk *pblk, struct nvm_rq *rqd) {
   if (pblk_check_io(pblk, rqd))
     return NVM_IO_ERR;
 #endif
+  printk("pblk_submit_io_sync: before nvm_submit_io_sync\n");
 
   return nvm_submit_io_sync(dev, rqd);
 }
@@ -834,6 +835,7 @@ next_rq:
     bio_put(bio);
     goto free_rqd_dma;
   }
+  printk("pblk_line_submit_snapshot_io: after pblk_submit_io_sync\n");
 
   atomic_dec(&pblk->inflight_io);
 
