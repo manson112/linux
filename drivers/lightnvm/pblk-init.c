@@ -645,6 +645,9 @@ static void pblk_set_provision(struct pblk *pblk, long nr_free_blks) {
   else
     pblk->op = geo->op;
 
+  printk("pblk_set_provision: pblk->op = %d\n", pblk->op);
+  printk("pblk_set_provision: pblk->op_blks = %d\n", pblk->op_blks);
+
   provisioned = nr_free_blks;
   provisioned *= (100 - pblk->op);
   sector_div(provisioned, 100);
