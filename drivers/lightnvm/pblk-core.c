@@ -847,6 +847,7 @@ free_rqd_dma:
 }
 int pblk_line_write_snapshot(struct pblk *pblk, struct pblk_line *line,
                              void *snapshot_buf, u64 paddr) {
+  printk("pblk_line_write_snapshot: before pblk_line_submit_snapshot_io\n");
   return pblk_line_submit_snapshot_io(pblk, line, snapshot_buf, paddr,
                                       PBLK_WRITE);
 }
