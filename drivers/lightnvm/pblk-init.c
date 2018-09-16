@@ -1122,7 +1122,7 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
     if (pblk_line_submit_snapshot_io(pblk, line,
                                      (struct line_snapshot *)line->snapshot,
                                      line->sec_in_line, PBLK_WRITE)) {
-      pr_error("pblk trans map write error");
+      pr_err("pblk trans map write error");
       break;
     }
     line->smeta->trans_map_seq_nr = transmap_seq++;
