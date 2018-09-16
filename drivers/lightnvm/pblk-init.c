@@ -1105,6 +1105,7 @@ static void pblk_free(struct pblk *pblk) {
 
 static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
+  struct pblk_smeta *smeta;
   int transmap_seq = 1;
   int left_sec = sizeof(&pblk->trans_map) / sizeof(&pblk->trans_map[0]);
 
@@ -1125,8 +1126,9 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
       pr_err("pblk trans map write error");
       break;
     }
-    line->smeta->trans_map_seq_nr = transmap_seq++;
+    line->smeta->buf->trans_map_seq_nr = transmap_seq++;
     pblk_line_close(pblk, line);
+    left_sec -= line->sec_in_line;
   }
   pblk_rl_free(&pblk->rl);
 

@@ -845,7 +845,11 @@ free_rqd_dma:
   nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
   return ret;
 }
-
+static int pblk_line_write_snapshot(struct pblk *pblk, struct pblk_line *line,
+                                    void *snapshot_buf, u64 paddr) {
+  return pblk_line_submit_snapshot_io(pblk, line, snapshot_buf, paddr,
+                                      PBLK_WRITE);
+}
 u64 pblk_line_smeta_start(struct pblk *pblk, struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
@@ -959,6 +963,7 @@ int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line) {
 }
 
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line) {
+  struct pblk_line_meta *lm = &pblk->lm;
   u64 bpaddr = line->smeta_ssec + lm->smeta_sec;
   return pblk_line_submit_snapshot_io(
       pblk, line, (struct line_snapshot *)line->snapshot, bpaddr, PBLK_READ);
