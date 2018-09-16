@@ -1110,7 +1110,7 @@ static void pblk_free(struct pblk *pblk) {
 static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
   int transmap_seq = 1;
-  unsigned long left_sec = (unsigned long)pblk_trans_map_size(pblk);
+  unsigned long left_sec = pblk->rl.nr_secs;
   printk("pblk_tear_down: left_sec = %lu\n", left_sec);
 
   if (graceful)
@@ -1151,11 +1151,15 @@ static void pblk_exit(void *private, bool graceful) {
   pblk_gc_exit(pblk, graceful);
   pblk_tear_down(pblk, graceful);
 
+  printk("pblk_exit: after pblk_tear_down\n");
+
 #ifdef CONFIG_NVM_DEBUG
   pr_info("pblk exit: L2P CRC: %x\n", pblk_l2p_crc(pblk));
 #endif
 
   pblk_free(pblk);
+  printk("pblk_exit: after pblk_free\n");
+
   up_write(&pblk_lock);
 }
 
