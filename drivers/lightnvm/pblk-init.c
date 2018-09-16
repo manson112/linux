@@ -1135,7 +1135,7 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
       pr_err("pblk trans map write error");
       break;
     }
-    line->emeta->buf->trans_map_seq_nr = transmap_seq++;
+    line->smeta->buf->trans_map_seq_nr = transmap_seq++;
     printk("pblk_tear_down: before smeta write\n");
     if (pblk_line_submit_smeta_io(pblk, line, line->smeta_ssec, PBLK_WRITE)) {
       pr_err("pblk smeta write error");
