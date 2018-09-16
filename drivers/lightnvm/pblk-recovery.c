@@ -787,6 +787,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   struct pblk_emeta *emeta;
   struct pblk_snapshot *snapshot;
   struct line_smeta *smeta_buf;
+  struct ppa_addr ppa;
   int found_lines = 0, recovered_lines = 0, open_lines = 0;
   int is_next = 0;
   int meta_line;
@@ -911,15 +912,15 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
 
     line->snapshot = snapshot;
 
-    if (pblk_line_read_snapshot(pblk, line, line->snapshot)) {
+    if (pblk_line_read_snapshot(pblk, line)) {
       // 삭제하고 recov list에 추가
       spin_lock(&l_mg->gc_lock);
       list_move_tail(&line->list, &recov_list);
       spin_unlock(&l_mg->gc_lock);
       continue;
     }
-
-    pblk_update_map(pblk, (sector_t)lba, line->snapshot[lba++]);
+    ppa.ppa = le64_to_cpu(line->snapshot[lba++]);
+    pblk_update_map(pblk, (sector_t)lba, ppa);
   }
 
   /* Verify closed blocks and recover this portion of L2P table*/
