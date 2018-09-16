@@ -1106,7 +1106,7 @@ static void pblk_free(struct pblk *pblk) {
 static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
   int transmap_seq = 1;
-  int left_sec = printk("pblk_tear_down: pblk_trans_map_size = %ld\n",
+  int left_sec = printk("pblk_tear_down: pblk_trans_map_size = %d\n",
                         (unsigned int)pblk_trans_map_size(pblk));
   printk("pblk_tear_down: left_sec = %d\n", left_sec);
 
