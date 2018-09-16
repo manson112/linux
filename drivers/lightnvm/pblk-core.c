@@ -743,19 +743,20 @@ static int pblk_line_submit_snapshot_io(struct pblk *pblk,
   } else
     return -EINVAL;
 
+  printk("pblk_line_submit_snapshot_io: before meta_list\n");
   meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL, &dma_meta_list);
   if (!meta_list)
     return -ENOMEM;
-
+  printk("pblk_line_submit_snapshot_io: before ppa_list\n");
   ppa_list = meta_list + pblk_dma_meta_size;
   dma_ppa_list = dma_meta_list + pblk_dma_meta_size;
-
+  printk("pblk_line_submit_snapshot_io: before next_rq\n");
 next_rq:
   memset(&rqd, 0, sizeof(struct nvm_rq));
-
+  printk("pblk_line_submit_snapshot_io: before rq_ppas\n");
   rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
   rq_len = rq_ppas * geo->csecs;
-
+  printk("pblk_line_submit_snapshot_io: before bio map kern\n");
   bio = bio_map_kern(dev->q, line->snapshot, rq_len, GFP_KERNEL);
   if (IS_ERR(bio)) {
     ret = PTR_ERR(bio);
@@ -773,12 +774,14 @@ next_rq:
   rqd.opcode = cmd_op;
   rqd.nr_ppas = rq_ppas;
 
+  printk("pblk_line_submit_snapshot_io: before dir == PBLK_WRITE\n");
   if (dir == PBLK_WRITE) {
     struct pblk_sec_meta *meta_list = rqd.meta_list;
 
     rqd.flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
     for (i = 0; i < rqd.nr_ppas;) {
       spin_lock(&line->lock);
+      printk("pblk_line_submit_snapshot_io: before __pblk_alloc_page\n");
       paddr = __pblk_alloc_page(pblk, line, min);
       spin_unlock(&line->lock);
       for (j = 0; j < min; j++, i++, paddr++) {
@@ -791,9 +794,11 @@ next_rq:
       struct ppa_addr ppa = addr_to_gen_ppa(pblk, paddr, id);
       int pos = pblk_ppa_to_pos(geo, ppa);
       int read_type = PBLK_READ_RANDOM;
-
+      printk("pblk_line_submit_snapshot_io: before pblk_io_alinged\n");
       if (pblk_io_aligned(pblk, rq_ppas))
         read_type = PBLK_READ_SEQUENTIAL;
+      printk("pblk_line_submit_snapshot_io: before pblk_set_read_mode\n");
+
       rqd.flags = pblk_set_read_mode(pblk, read_type);
 
       while (test_bit(pos, line->blk_bitmap)) {
@@ -808,6 +813,8 @@ next_rq:
         ppa = addr_to_gen_ppa(pblk, paddr, id);
         pos = pblk_ppa_to_pos(geo, ppa);
       }
+      printk(
+          "pblk_line_submit_snapshot_io: before pblk_boundary_paddr_checks\n");
 
       if (pblk_boundary_paddr_checks(pblk, paddr + min)) {
         pr_err("pblk: corrupt emeta line:%d\n", line->id);
@@ -820,7 +827,7 @@ next_rq:
         rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
     }
   }
-
+  printk("pblk_line_submit_snapshot_io: before pblk_submit_io_sync\n");
   ret = pblk_submit_io_sync(pblk, &rqd);
   if (ret) {
     pr_err("pblk: emeta I/O submission failed: %d\n", ret);
