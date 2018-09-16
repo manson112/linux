@@ -919,7 +919,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
       spin_unlock(&l_mg->gc_lock);
       continue;
     }
-    ppa.ppa = line->snapshot->buf[lba++];
+    ppa.ppa = line->snapshot->buf->snapshot[lba++];
     pblk_update_map(pblk, (sector_t)lba, ppa);
   }
 
