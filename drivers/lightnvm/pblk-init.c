@@ -646,19 +646,20 @@ static void pblk_set_provision(struct pblk *pblk, long nr_free_blks) {
     pblk->op = geo->op;
 
   printk("pblk_set_provision: pblk->op = %d\n", pblk->op);
-  printk("pblk_set_provision: pblk->op_blks = %d\n", pblk->op_blks);
 
   provisioned = nr_free_blks;
   provisioned *= (100 - pblk->op);
   sector_div(provisioned, 100);
 
   pblk->op_blks = nr_free_blks - provisioned;
+  printk("pblk_set_provision: pblk->op_blks = %d\n", pblk->op_blks);
 
   /* Internally pblk manages all free blocks, but all calculations based
    * on user capacity consider only provisioned blocks
    */
   pblk->rl.total_blocks = nr_free_blks;
   pblk->rl.nr_secs = nr_free_blks * geo->clba;
+  printk("pblk_set_provision: pblk->rl.nr_secs = %u\n", pblk->rl.nr_secs);
 
   /* Consider sectors used for metadata */
   sec_meta = (lm->smeta_sec + lm->emeta_sec[0]) * l_mg->nr_free_lines;
