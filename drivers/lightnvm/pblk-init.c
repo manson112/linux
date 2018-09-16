@@ -659,7 +659,7 @@ static void pblk_set_provision(struct pblk *pblk, long nr_free_blks) {
    */
   pblk->rl.total_blocks = nr_free_blks;
   pblk->rl.nr_secs = nr_free_blks * geo->clba;
-  printk("pblk_set_provision: pblk->rl.nr_secs = %u\n", pblk->rl.nr_secs);
+  printk("pblk_set_provision: pblk->rl.nr_secs = %llu\n", pblk->rl.nr_secs);
 
   /* Consider sectors used for metadata */
   sec_meta = (lm->smeta_sec + lm->emeta_sec[0]) * l_mg->nr_free_lines;
