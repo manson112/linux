@@ -1105,7 +1105,6 @@ static void pblk_free(struct pblk *pblk) {
 
 static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
-  struct pblk_smeta *smeta;
   int transmap_seq = 1;
   int left_sec = sizeof(&pblk->trans_map) / sizeof(&pblk->trans_map[0]);
 
@@ -1120,9 +1119,9 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   for (; left_sec > 0;) {
     line = pblk_line_get(pblk);
     line->snapshot = kmalloc(line->sec_in_line, GFP_KERNEL);
-    if (pblk_line_submit_snapshot_io(pblk, line,
-                                     (struct line_snapshot *)line->snapshot,
-                                     line->sec_in_line, PBLK_WRITE)) {
+    if (pblk_line_write_snapshot(pblk, line,
+                                 (struct line_snapshot *)line->snapshot,
+                                 line->sec_in_line)) {
       pr_err("pblk trans map write error");
       break;
     }
