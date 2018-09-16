@@ -1107,6 +1107,7 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
   int transmap_seq = 1;
   int left_sec = sizeof(&pblk->trans_map) / sizeof(&pblk->trans_map[0]);
+  printk("pblk_tear_down: left_sec = %d\n", left_sec);
 
   if (graceful)
     __pblk_pipeline_flush(pblk);
@@ -1115,13 +1116,18 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   spin_lock(&pblk->rwb.w_lock);
   pblk_rb_sync_l2p(&pblk->rwb);
   spin_unlock(&pblk->rwb.w_lock);
+  printk("pblk_tear_down: before save l2p\n");
 
   for (; left_sec > 0;) {
+    printk("pblk_tear_down: before line get\n");
     line = pblk_line_get(pblk);
+    printk("pblk_tear_down: before allocation\n");
     line->snapshot = kmalloc(line->sec_in_line, GFP_KERNEL);
+    printk("pblk_tear_down: before write\n");
     if (pblk_line_write_snapshot(pblk, line,
                                  (struct line_snapshot *)line->snapshot,
                                  line->sec_in_line)) {
+      printk("pblk_tear_down: write error\n");
       pr_err("pblk trans map write error");
       break;
     }
