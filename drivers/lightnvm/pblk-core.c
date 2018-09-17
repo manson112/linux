@@ -855,6 +855,8 @@ next_rq:
 
 free_rqd_dma:
   nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
+  printk("pblk_line_submit_snapshot_io: after free_rqd_dma\n");
+
   return ret;
 }
 int pblk_line_write_snapshot(struct pblk *pblk, struct pblk_line *line,
