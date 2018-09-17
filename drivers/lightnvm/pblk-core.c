@@ -892,6 +892,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
   int cmd_op, bio_op;
   int flags;
 
+  printk("pblk_line_submit_smeta_io: before dir check\n");
   if (dir == PBLK_WRITE) {
     bio_op = REQ_OP_WRITE;
     cmd_op = NVM_OP_PWRITE;
@@ -913,6 +914,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
 
   rqd.ppa_list = rqd.meta_list + pblk_dma_meta_size;
   rqd.dma_ppa_list = rqd.dma_meta_list + pblk_dma_meta_size;
+  printk("pblk_line_submit_smeta_io: before bio_map_kern\n");
 
   bio = bio_map_kern(dev->q, line->smeta, lm->smeta_len, GFP_KERNEL);
   if (IS_ERR(bio)) {
@@ -927,6 +929,8 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
   rqd.opcode = cmd_op;
   rqd.flags = flags;
   rqd.nr_ppas = lm->smeta_sec;
+
+  printk("pblk_line_submit_smeta_io: before rqd.ppa_list set\n");
 
   for (i = 0; i < lm->smeta_sec; i++, paddr++) {
     struct pblk_sec_meta *meta_list = rqd.meta_list;
@@ -945,12 +949,15 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
    * the write thread is the only one sending write and erase commands,
    * there is no need to take the LUN semaphore.
    */
+  printk("pblk_line_submit_smeta_io: before pblk_submit_io_sync\n");
+
   ret = pblk_submit_io_sync(pblk, &rqd);
   if (ret) {
     pr_err("pblk: smeta I/O submission failed: %d\n", ret);
     bio_put(bio);
     goto free_ppa_list;
   }
+  printk("pblk_line_submit_smeta_io: after pblk_submit_io_sync\n");
 
   atomic_dec(&pblk->inflight_io);
 
