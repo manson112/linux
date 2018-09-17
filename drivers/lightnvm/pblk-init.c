@@ -1109,6 +1109,8 @@ static void pblk_free(struct pblk *pblk) {
 
 static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
+  struct pblk_smeta *smeta;
+  struct line_smeta *smeta_buf;
   int transmap_seq = 1;
   unsigned long left_sec = pblk->rl.nr_secs / 64;
   printk("pblk_tear_down: left_sec = %lu\n", left_sec);
@@ -1136,7 +1138,9 @@ static void pblk_tear_down(struct pblk *pblk, bool graceful) {
       break;
     }
     printk("pblk_tear_down: before trans map seq nr set \n");
-    line->smeta->buf->trans_map_seq_nr = transmap_seq++;
+    smeta = line->smeta;
+    smeta_buf = (struct line_smeta *)smeta;
+    smeta_buf->trans_map_seq_nr = transmap_seq++;
     printk("pblk_tear_down: before smeta write\n");
     if (pblk_line_write_smeta(pblk, line, line->smeta_ssec)) {
       pr_err("pblk smeta write error");
