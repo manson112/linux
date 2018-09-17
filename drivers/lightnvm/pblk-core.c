@@ -838,17 +838,21 @@ next_rq:
 
   atomic_dec(&pblk->inflight_io);
 
+  printk("pblk_line_submit_snapshot_io: after atomic_dec\n");
   if (rqd.error) {
     if (dir == PBLK_WRITE)
       pblk_log_write_err(pblk, &rqd);
     else
       pblk_log_read_err(pblk, &rqd);
   }
+  printk("pblk_line_submit_snapshot_io: after error\n");
 
   snapshot_buf += rq_len;
   left_ppas -= rq_ppas;
   if (left_ppas)
     goto next_rq;
+  printk("pblk_line_submit_snapshot_io: before free_rqd_dma\n");
+
 free_rqd_dma:
   nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
   return ret;

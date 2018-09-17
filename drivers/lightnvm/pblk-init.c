@@ -1110,7 +1110,7 @@ static void pblk_free(struct pblk *pblk) {
 static void pblk_tear_down(struct pblk *pblk, bool graceful) {
   struct pblk_line *line;
   int transmap_seq = 1;
-  unsigned long left_sec = pblk->rl.nr_secs;
+  unsigned long left_sec = pblk->rl.nr_secs / 64;
   printk("pblk_tear_down: left_sec = %lu\n", left_sec);
 
   if (graceful)
