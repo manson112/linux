@@ -456,7 +456,6 @@ int pblk_submit_io_sync(struct pblk *pblk, struct nvm_rq *rqd) {
   if (pblk_check_io(pblk, rqd))
     return NVM_IO_ERR;
 #endif
-  printk("pblk_submit_io_sync: before nvm_submit_io_sync\n");
 
   return nvm_submit_io_sync(dev, rqd);
 }
@@ -960,7 +959,10 @@ free_ppa_list:
 
   return ret;
 }
-
+int pblk_line_write_smeta(struct pblk *pblk, struct pblk_line *line,
+                          u64 paddr) {
+  return pblk_line_submit_smeta_io(pblk, line, paddr, PBLK_WRITE);
+}
 int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line) {
   u64 bpaddr = pblk_line_smeta_start(pblk, line);
 

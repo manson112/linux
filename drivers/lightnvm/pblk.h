@@ -799,8 +799,8 @@ void pblk_gen_run_ws(struct pblk *pblk, struct pblk_line *line, void *priv,
                      void (*work)(struct work_struct *), gfp_t gfp_mask,
                      struct workqueue_struct *wq);
 u64 pblk_line_smeta_start(struct pblk *pblk, struct pblk_line *line);
-static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
-                                     u64 paddr, int dir);
+int pblk_line_write_smeta(struct pblk *pblk, struct pblk_line *line, u64 paddr);
+
 int pblk_line_read_smeta(struct pblk *pblk, struct pblk_line *line);
 int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
                          void *emeta_buf);
