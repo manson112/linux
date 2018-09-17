@@ -755,6 +755,8 @@ next_rq:
   memset(&rqd, 0, sizeof(struct nvm_rq));
   printk("pblk_line_submit_snapshot_io: before rq_ppas\n");
   rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
+  printk("pblk_line_submit_snapshot_io: left_ppas = %d, rq_ppas = %d\n",
+         left_ppas, rq_ppas);
   rq_len = rq_ppas * geo->csecs;
   printk("pblk_line_submit_snapshot_io: before bio map kern\n");
   bio = bio_map_kern(dev->q, line->snapshot, rq_len, GFP_KERNEL);
