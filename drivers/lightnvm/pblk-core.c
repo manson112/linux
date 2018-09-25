@@ -1408,11 +1408,10 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   int snapshot_mem;
   size_t map_size;
 
-  map_size = pblk_trans_map_size(pblk);
-
   if (pblk->addrf_len < 32) {
     entry_size = 4;
   }
+  map_size = entry_size * pblk->rl.nr_secs;
 
   // get new line for snapshot
   new_line = pblk_line_replace_snapshot_data(pblk);
@@ -1428,7 +1427,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
     ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, map_size);
     if (ret) {
-      pr_err("pblk: submit snapshot line to %d failed (%d)\n", line->id, ret);
+      pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
+             ret);
       return;
     }
     printk("pblk_start_snapshot: snapshot saved %d/%u \n", snapshot_mem,
