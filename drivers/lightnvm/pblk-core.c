@@ -1438,8 +1438,6 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   pblk_wait_for_snapshot(pblk);
 }
 
-void pblk_start_snapshot(struct pblk *pblk) { __pblk_start_snapshot(pblk); }
-
 void __pblk_pipeline_flush(struct pblk *pblk) {
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
   int ret;
@@ -1464,7 +1462,7 @@ void __pblk_pipeline_flush(struct pblk *pblk) {
 
   flush_workqueue(pblk->bb_wq);
   // save snapshot
-  pblk_start_snapshot(pblk);
+  __pblk_start_snapshot(pblk);
 
   pblk_line_close_meta_sync(pblk);
 }
@@ -1558,6 +1556,8 @@ struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk) {
 
   cur = l_mg->data_line;
   new = l_mg->data_next;
+  printk("cur pointer: %p\n", cur);
+  printk("new pointer: %p\n", new);
   if (!new)
     goto out;
   l_mg->data_line = new;
