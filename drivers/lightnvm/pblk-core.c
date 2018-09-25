@@ -1420,7 +1420,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   new_line = pblk_line_replace_snapshot_data(pblk);
   printk("__pblk_start_snapshot: new_line = %p\n", new_line);
   printk("__pblk_start_snapshot: prev_line = %p\n", prev_line);
-  pblk_line_close_meta(pblk, prev_line);
+  // pblk_line_close_meta(pblk, prev_line);
 
   printk("after pblk line close meta\n");
   // fail
