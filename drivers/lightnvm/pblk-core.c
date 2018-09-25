@@ -1422,6 +1422,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   printk("__pblk_start_snapshot: prev_line = %p\n", prev_line);
   pblk_line_close_meta(pblk, prev_line);
 
+  printk("after pblk line close meta\n");
   // fail
   if (!new_line) {
     pr_err("pblk_start_snapshot: failed to start snapshot\n");
@@ -1810,7 +1811,10 @@ void pblk_line_close_meta(struct pblk *pblk, struct pblk_line *line) {
   if (line->emeta_ssec != line->cur_sec)
     line->emeta_ssec = line->cur_sec;
 
+  printk("before list_add_tail\n");
   list_add_tail(&line->list, &l_mg->emeta_list);
+  printk("after list_add_tail\n");
+
   spin_unlock(&line->lock);
   spin_unlock(&l_mg->close_lock);
 
