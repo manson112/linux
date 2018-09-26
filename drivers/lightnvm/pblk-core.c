@@ -1668,8 +1668,7 @@ struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk) {
 
   cur = l_mg->data_line;
   new = l_mg->data_next;
-  printk("cur pointer: %p\n", cur);
-  printk("new pointer: %p\n", new);
+
   if (!new)
     goto out;
   l_mg->data_line = new;

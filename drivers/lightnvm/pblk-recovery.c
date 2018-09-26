@@ -843,7 +843,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     spin_unlock(&line->lock);
 
     /* for snapshot */
-    if (line->id == PBLK_LINETYPE_LOG) {
+    if (line->type == PBLK_LINETYPE_LOG) {
       snapshot_line_index = i;
       snapshot_line = line;
       printk("snapshot_line: [%d]%p\n", snapshot_line_index, snapshot_line);
