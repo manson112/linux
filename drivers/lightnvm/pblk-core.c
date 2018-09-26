@@ -949,7 +949,8 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
                                    PBLK_READ);
 }
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line) {
-  u64 bit = find_next_bit(line->map_bitmap, pblk->lm.sec_per_line,
+  u64 bit = find_next_bit(line->map_bitmap,
+                          pblk->lm.sec_per_line - pblk->lm.smeta_sec,
                           line->smeta_ssec + pblk->lm.smeta_sec);
 
   return pblk_line_read_snapshot_io(pblk, line, bit);
