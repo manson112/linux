@@ -949,7 +949,7 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
                                    PBLK_READ);
 }
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line) {
-  u64 bit = line->smeta_ssec + pblk->lm.smeta_sec;
+  u64 bit = pblk_line_smeta_start(pblk, line) + pblk->lm.smeta_sec;
 
   return pblk_line_read_snapshot_io(pblk, line, bit);
 }
