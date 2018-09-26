@@ -859,11 +859,12 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
 
     if (pblk_line_recov_alloc(pblk, line))
       goto out;
-
-    pblk_recov_line_add_ordered(&recov_list, line);
-    found_lines++;
-    pr_debug("pblk: recovering data line %d, seq:%llu\n", line->id,
-             smeta_buf->seq_nr);
+    if (line->type != PBLK_LINETYPE_LOG) {
+      pblk_recov_line_add_ordered(&recov_list, line);
+      found_lines++;
+      pr_debug("pblk: recovering data line %d, seq:%llu\n", line->id,
+               smeta_buf->seq_nr);
+    }
   }
 
   if (!found_lines) {
