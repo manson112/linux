@@ -744,7 +744,7 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
     entry_size = 4;
   printk("pblk_line_read_snapshot_io: entry_size = %d\n", entry_size);
 
-  left_ppas = pblk->rl.nr_secs * entry_size;
+  left_ppas = pblk->rl.nr_secs * entry_size / geo->csecs;
   printk("pblk_line_read_snapshot: left_ppas = %d\n", left_ppas);
 
   bio_op = REQ_OP_READ;
