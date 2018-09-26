@@ -846,6 +846,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     if (line->type == PBLK_LINETYPE_LOG) {
       snapshot_line_index = i;
       snapshot_line = line;
+      line->type = PBLK_LINETYPE_DATA;
       smeta_buf->header.type = cpu_to_le16(PBLK_LINETYPE_DATA);
       bitmap_clear(line->erase_bitmap, 0, lm->blk_bitmap_len);
       printk("snapshot_line: [%d]%p\n", snapshot_line_index, snapshot_line);
