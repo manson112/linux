@@ -1525,7 +1525,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   // struct pblk_line *prev_line = new_line;
   int entry_size = 8;
-  int snapshot_mem;
+  int snapshot_mem = 0;
   size_t map_size;
 
   if (pblk->addrf_len < 32) {
@@ -1534,7 +1534,9 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   map_size = entry_size * pblk->rl.nr_secs;
 
   // get new line for snapshot
-  new_line = pblk_line_replace_snapshot_data(pblk);
+  if (new_line->sec_in_line + new_line->smeta_sec + new_line->emeta_sec !=
+      pblk->lm.sec_per_line)
+    new_line = pblk_line_replace_snapshot_data(pblk);
   // pblk_line_close_meta(pblk, prev_line);
 
   // fail
