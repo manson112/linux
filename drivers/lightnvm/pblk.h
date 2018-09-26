@@ -828,12 +828,12 @@ void pblk_lookup_l2p_rand(struct pblk *pblk, struct ppa_addr *ppas,
 void pblk_lookup_l2p_seq(struct pblk *pblk, struct ppa_addr *ppas,
                          sector_t blba, int nr_secs);
 struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk);
-int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line)
-    /*
-     * pblk user I/O write path
-     */
-    int pblk_write_to_cache(struct pblk *pblk, struct bio *bio,
-                            unsigned long flags);
+int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line);
+/*
+ * pblk user I/O write path
+ */
+int pblk_write_to_cache(struct pblk *pblk, struct bio *bio,
+                        unsigned long flags);
 int pblk_write_gc_to_cache(struct pblk *pblk, struct pblk_gc_rq *gc_rq);
 
 /*
