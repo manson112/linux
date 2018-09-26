@@ -846,7 +846,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     if (line->type == PBLK_LINETYPE_LOG) {
       snapshot_line_index = i;
       snapshot_line = line;
-      bitmap_clear(line->erase_bitmap, 0, lm->blk_bitmap_len
+      bitmap_clear(line->erase_bitmap, 0, lm->blk_bitmap_len);
       printk("snapshot_line: [%d]%p\n", snapshot_line_index, snapshot_line);
     }
 
