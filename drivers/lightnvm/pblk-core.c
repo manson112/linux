@@ -1522,6 +1522,8 @@ static void pblk_line_close_meta_sync(struct pblk *pblk) {
   flush_workqueue(pblk->close_wq);
 }
 static void __pblk_start_snapshot(struct pblk *pblk) {
+  struct nvm_tgt_dev *dev = pblk->dev;
+  struct nvm_geo *geo = &dev->geo;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   // struct pblk_line *prev_line = new_line;
   int entry_size = 8;
@@ -1531,7 +1533,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   if (pblk->addrf_len < 32) {
     entry_size = 4;
   }
-  map_size = entry_size * pblk->rl.nr_secs;
+  map_size = entry_size * pblk->rl.nr_secs / geo->csecs;
 
   // get new line for snapshot
   if (new_line->sec_in_line + pblk->lm.smeta_sec + pblk->lm.emeta_sec[0] !=
