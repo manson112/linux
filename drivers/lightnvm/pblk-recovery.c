@@ -879,52 +879,93 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   }
 
   /* recov l2p from snapshot */
-  // if (snapshot_line) {
-  //   struct list_head *move_list;
-  //   /* read emeta for snapshot line */
-  //   snapshot_line->emeta_ssec = pblk_line_emeta_start(pblk, snapshot_line);
-  //   snapshot_line->emeta = emeta;
-  //   memset(snapshot_line->emeta->buf, 0, lm->emeta_len[0]);
+  if (snapshot_line) {
+    struct list_head *move_list;
+    /* read emeta for snapshot line */
+    snapshot_line->emeta_ssec = pblk_line_emeta_start(pblk, snapshot_line);
+    snapshot_line->emeta = emeta;
+    memset(snapshot_line->emeta->buf, 0, lm->emeta_len[0]);
 
-  //   if (pblk_line_read_emeta(pblk, snapshot_line, snapshot_line->emeta->buf))
-  //   {
-  //     pr_err("pblk_recov_l2p: pblk_line_read_emeta for snapshot error");
-  //     goto recov_l2p_from_emeta;
-  //   }
+    if (pblk_line_read_emeta(pblk, snapshot_line, snapshot_line->emeta->buf)) {
+      pr_err("pblk_recov_l2p: pblk_line_read_emeta for snapshot error");
+      spin_lock(&line->lock);
+      line->state = PBLK_LINESTATE_CLOSED;
+      move_list = pblk_line_gc_list(pblk, line);
+      spin_unlock(&line->lock);
 
-  //   if (pblk_recov_check_emeta(pblk, snapshot_line->emeta->buf)) {
-  //     pr_err("pblk_recov_l2p: pblk_recov_check_emeta for snapshot error");
-  //     goto recov_l2p_from_emeta;
-  //   }
+      spin_lock(&l_mg->gc_lock);
+      list_move_tail(&line->list, move_list);
+      spin_unlock(&l_mg->gc_lock);
 
-  //   if (pblk_recov_check_line_version(pblk, snapshot_line->emeta->buf))
-  //     return ERR_PTR(-EINVAL);
+      kfree(line->map_bitmap);
+      line->map_bitmap = NULL;
+      line->smeta = NULL;
+      line->emeta = NULL;
+      goto recov_l2p_from_emeta;
+    }
 
-  //   pblk_recov_wa_counters(pblk, snapshot_line->emeta->buf);
+    if (pblk_recov_check_emeta(pblk, snapshot_line->emeta->buf)) {
+      pr_err("pblk_recov_l2p: pblk_recov_check_emeta for snapshot error");
+      spin_lock(&line->lock);
+      line->state = PBLK_LINESTATE_CLOSED;
+      move_list = pblk_line_gc_list(pblk, line);
+      spin_unlock(&line->lock);
 
-  //   /* pblk_line_read_snapshot 만들기 */
-  //   if (pblk_line_read_snapshot(pblk, snapshot_line)) {
-  //     pr_err("pblk_recov_l2p: pblk_line_read_snapshot error");
-  //     goto recov_l2p_from_emeta;
-  //   }
-  //   /* erase bit map 세팅 / 이부분 위치 조정 */
-  //   spin_lock(&line->lock);
-  //   line->state = PBLK_LINESTATE_CLOSED;
-  //   move_list = pblk_line_gc_list(pblk, line);
-  //   spin_unlock(&line->lock);
+      spin_lock(&l_mg->gc_lock);
+      list_move_tail(&line->list, move_list);
+      spin_unlock(&l_mg->gc_lock);
 
-  //   spin_lock(&l_mg->gc_lock);
-  //   list_move_tail(&line->list, move_list);
-  //   spin_unlock(&l_mg->gc_lock);
+      kfree(line->map_bitmap);
+      line->map_bitmap = NULL;
+      line->smeta = NULL;
+      line->emeta = NULL;
+      goto recov_l2p_from_emeta;
+    }
 
-  //   kfree(line->map_bitmap);
-  //   line->map_bitmap = NULL;
-  //   line->smeta = NULL;
-  //   line->emeta = NULL;
+    if (pblk_recov_check_line_version(pblk, snapshot_line->emeta->buf))
+      return ERR_PTR(-EINVAL);
 
-  // } else {
-  //   pr_info("no snapshot\n");
-  // }
+    pblk_recov_wa_counters(pblk, snapshot_line->emeta->buf);
+
+    /* pblk_line_read_snapshot 만들기 */
+    if (pblk_line_read_snapshot(pblk, snapshot_line)) {
+      pr_err("pblk_recov_l2p: pblk_line_read_snapshot error");
+      spin_lock(&line->lock);
+      line->state = PBLK_LINESTATE_CLOSED;
+      move_list = pblk_line_gc_list(pblk, line);
+      spin_unlock(&line->lock);
+
+      spin_lock(&l_mg->gc_lock);
+      list_move_tail(&line->list, move_list);
+      spin_unlock(&l_mg->gc_lock);
+
+      kfree(line->map_bitmap);
+      line->map_bitmap = NULL;
+      line->smeta = NULL;
+      line->emeta = NULL;
+      goto recov_l2p_from_emeta;
+    }
+    printk("pblk_line_read_snapshot success!\n");
+    /* erase bit map 세팅 / 이부분 위치 조정 */
+    spin_lock(&line->lock);
+    line->state = PBLK_LINESTATE_CLOSED;
+    move_list = pblk_line_gc_list(pblk, line);
+    spin_unlock(&line->lock);
+
+    spin_lock(&l_mg->gc_lock);
+    list_move_tail(&line->list, move_list);
+    spin_unlock(&l_mg->gc_lock);
+
+    kfree(line->map_bitmap);
+    line->map_bitmap = NULL;
+    line->smeta = NULL;
+    line->emeta = NULL;
+
+    recovered_lines = found_lines;
+    goto out;
+  } else {
+    pr_info("no snapshot\n");
+  }
 
 recov_l2p_from_emeta:
   /* Verify closed blocks and recover this portion of L2P table*/
