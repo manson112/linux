@@ -1534,6 +1534,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
     pr_err("pblk_start_snapshot: failed to start snapshot\n");
     return;
   }
+  printk("pblk: submit snapshot line at %d\n", new_line->id);
   while (snapshot_mem < map_size) {
     int ret;
 
