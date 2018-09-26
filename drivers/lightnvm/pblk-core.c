@@ -1534,7 +1534,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   map_size = entry_size * pblk->rl.nr_secs;
 
   // get new line for snapshot
-  if (new_line->sec_in_line + new_line->smeta_sec + new_line->emeta_sec !=
+  if (new_line->sec_in_line + pblk->lm.smeta_sec + pblk->lm.emeta_sec !=
       pblk->lm.sec_per_line)
     new_line = pblk_line_replace_snapshot_data(pblk);
   // pblk_line_close_meta(pblk, prev_line);
