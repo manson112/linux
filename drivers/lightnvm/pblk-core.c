@@ -742,8 +742,11 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
 
   if (pblk->addrf_len < 32)
     entry_size = 4;
+  printk("pblk_line_read_snapshot_io: entry_size = %d\n", entry_size);
 
   left_ppas = pblk->rl.nr_secs * entry_size;
+  printk("pblk_line_read_snapshot: left_ppas = %d\n", left_ppas);
+
   bio_op = REQ_OP_READ;
   cmd_op = NVM_OP_PREAD;
 
@@ -759,6 +762,9 @@ next_rq:
 
   rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
   rq_len = rq_ppas * geo->csecs;
+
+  printk("pblk_line_read_snapshot: rq_ppas = %d\n", rq_ppas);
+  printk("pblk_line_read_snapshot: rq_len = %d\n", rq_len);
 
   bio = pblk_bio_map_addr(pblk, trans_map, rq_ppas, rq_len, PBLK_VMALLOC_META,
                           GFP_KERNEL);
@@ -801,7 +807,7 @@ next_rq:
     }
 
     if (pblk_boundary_paddr_checks(pblk, paddr + min)) {
-      pr_err("pblk: corrupt emeta line:%d\n", line->id);
+      pr_err("pblk: corrupt snapshot line:%d\n", line->id);
       bio_put(bio);
       ret = -EINTR;
       goto free_rqd_dma;
@@ -950,7 +956,7 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
 }
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line) {
   u64 bit = pblk_line_smeta_start(pblk, line) + pblk->lm.smeta_sec;
-
+  printk("pblk_line_read_snapshot: bit = %lu\n", (unsigned long)bit);
   return pblk_line_read_snapshot_io(pblk, line, bit);
 }
 

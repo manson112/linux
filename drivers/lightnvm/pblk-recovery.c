@@ -846,8 +846,6 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     if (line->type == PBLK_LINETYPE_LOG) {
       snapshot_line_index = i;
       snapshot_line = line;
-      line->type = PBLK_LINETYPE_DATA;
-      smeta_buf->header.type = cpu_to_le16(PBLK_LINETYPE_DATA);
       bitmap_clear(line->erase_bitmap, 0, lm->blk_bitmap_len);
       printk("snapshot_line: [%d]%p\n", snapshot_line_index, snapshot_line);
     }
@@ -882,7 +880,6 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   if (snapshot_line) {
     struct list_head *move_list;
     /* pblk_line_read_snapshot 만들기 */
-    find_next_bit(line->map_bitmap, pblk->lm.sec_per_line, line->cur_sec);
     if (pblk_line_read_snapshot(pblk, snapshot_line)) {
       pr_err("pblk_recov_l2p: pblk_line_read_snapshot error");
       spin_lock(&line->lock);
