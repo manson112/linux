@@ -882,36 +882,37 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     /* pblk_line_read_snapshot 만들기 */
     if (pblk_line_read_snapshot(pblk, snapshot_line)) {
       pr_err("pblk_recov_l2p: pblk_line_read_snapshot error");
-      spin_lock(&line->lock);
-      line->state = PBLK_LINESTATE_CLOSED;
-      move_list = pblk_line_gc_list(pblk, line);
-      spin_unlock(&line->lock);
+      spin_lock(&snapshot_line->lock);
+      snapshot_line->state = PBLK_LINESTATE_CLOSED;
+      move_list = pblk_line_gc_list(pblk, snapshot_line);
+      spin_unlock(&snapshot_line->lock);
 
       spin_lock(&l_mg->gc_lock);
-      list_move_tail(&line->list, move_list);
+      list_move_tail(&snapshot_line->list, move_list);
       spin_unlock(&l_mg->gc_lock);
 
-      kfree(line->map_bitmap);
-      line->map_bitmap = NULL;
-      line->smeta = NULL;
-      line->emeta = NULL;
+      kfree(snapshot_line->map_bitmap);
+      snapshot_line->map_bitmap = NULL;
+      snapshot_line->smeta = NULL;
+      snapshot_line->emeta = NULL;
       goto recov_l2p_from_emeta;
     }
     printk("pblk_line_read_snapshot success!\n");
     /* erase bit map 세팅 / 이부분 위치 조정 */
-    spin_lock(&line->lock);
-    line->state = PBLK_LINESTATE_CLOSED;
-    move_list = pblk_line_gc_list(pblk, line);
-    spin_unlock(&line->lock);
+    // *snapshot_line->vsc = cpu_to_le32(0);
+    spin_lock(&snapshot_line->lock);
+    snapshot_line->state = PBLK_LINESTATE_CLOSED;
+    move_list = pblk_line_gc_list(pblk, snapshot_line);
+    spin_unlock(&snapshot_line->lock);
 
     spin_lock(&l_mg->gc_lock);
-    list_move_tail(&line->list, move_list);
+    list_move_tail(&snapshot_line->list, move_list);
     spin_unlock(&l_mg->gc_lock);
 
-    kfree(line->map_bitmap);
-    line->map_bitmap = NULL;
-    line->smeta = NULL;
-    line->emeta = NULL;
+    kfree(snapshot_line->map_bitmap);
+    snapshot_line->map_bitmap = NULL;
+    snapshot_line->smeta = NULL;
+    snapshot_line->emeta = NULL;
 
     recovered_lines = found_lines;
     goto out;
