@@ -881,11 +881,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   /* recov l2p from snapshot */
   if (snapshot_line) {
     struct list_head *move_list;
-    /* read emeta for snapshot line */
-    snapshot_line->emeta_ssec = pblk_line_emeta_start(pblk, snapshot_line);
-    snapshot_line->emeta = emeta;
-
     /* pblk_line_read_snapshot 만들기 */
+    find_next_bit(line->map_bitmap, pblk->lm.sec_per_line, line->cur_sec);
     if (pblk_line_read_snapshot(pblk, snapshot_line)) {
       pr_err("pblk_recov_l2p: pblk_line_read_snapshot error");
       spin_lock(&line->lock);

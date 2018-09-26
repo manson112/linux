@@ -949,7 +949,10 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
                                    PBLK_READ);
 }
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line) {
-  return pblk_line_read_snapshot_io(pblk, line, line->emeta_ssec);
+  u64 bit = find_next_bit(line->map_bitmap, pblk->lm.sec_per_line,
+                          line->smeta_ssec + pblk->lm.smeta_sec);
+
+  return pblk_line_read_snapshot_io(pblk, line, bit);
 }
 
 static void pblk_setup_e_rq(struct pblk *pblk, struct nvm_rq *rqd,
@@ -1624,6 +1627,7 @@ retry_erase:
   }
 
 retry_setup:
+  new->type = PBLK_LINETYPE_DATA;
   if (!pblk_line_init_metadata(pblk, new, cur)) {
     new = pblk_line_retry(pblk, new);
     if (!new)
