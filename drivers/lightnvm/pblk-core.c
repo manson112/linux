@@ -726,14 +726,13 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
                                       u64 paddr) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
-  struct pblk_line_mgmt *l_mg = &pblk->l_mg;
-  struct pblk_line_meta *lm = &pblk->lm;
   void *ppa_list, *meta_list;
   struct bio *bio;
   struct nvm_rq rqd;
   unsigned char *trans_map = pblk->trans_map;
   dma_addr_t dma_ppa_list, dma_meta_list;
   int left_ppas;
+  int min = pblk->min_write_pgs;
   int id = line->id;
   int rq_ppas, rq_len;
   int cmd_op, bio_op;
@@ -1516,7 +1515,7 @@ static void pblk_line_close_meta_sync(struct pblk *pblk) {
 }
 static void __pblk_start_snapshot(struct pblk *pblk) {
   struct pblk_line *new_line = pblk_line_get_data(pblk);
-  struct pblk_line *prev_line = new_line;
+  // struct pblk_line *prev_line = new_line;
   int entry_size = 8;
   int snapshot_mem;
   size_t map_size;
