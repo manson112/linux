@@ -887,7 +887,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     goto out;
   }
   list_for_each_entry_safe(line, tline, &snapshot_list, list) {
-    printk("snapshot line[%d]\n", line->id);
+    printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
+           line->id);
     pblk_recov_l2p_from_snapshot(pblk, line);
   }
 
