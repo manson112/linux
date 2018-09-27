@@ -1402,14 +1402,13 @@ static void pblk_line_close_meta_sync(struct pblk *pblk) {
   flush_workqueue(pblk->close_wq);
 }
 static void __pblk_start_snapshot(struct pblk *pblk) {
+  struct nvm_tgt_dev *dev = pblk->dev;
+  struct nvm_geo *geo = &dev->geo;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   struct pblk_line *prev_line = new_line;
   int entry_size = 8;
-  int snapshot_mem;
+  unsigned long snapshot_mem = 0;
   size_t map_size;
-
-  printk("__pblk_start_snapshot: new_line = %p\n", new_line);
-  printk("__pblk_start_snapshot: prev_line = %p\n", prev_line);
 
   if (pblk->addrf_len < 32) {
     entry_size = 4;
@@ -1418,11 +1417,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
   // get new line for snapshot
   new_line = pblk_line_replace_snapshot_data(pblk);
-  printk("__pblk_start_snapshot: new_line = %p\n", new_line);
-  printk("__pblk_start_snapshot: prev_line = %p\n", prev_line);
   // pblk_line_close_meta(pblk, prev_line);
 
-  printk("after pblk line close meta\n");
   // fail
   if (!new_line) {
     pr_err("pblk_start_snapshot: failed to start snapshot\n");

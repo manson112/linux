@@ -478,12 +478,14 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
   rqd->bio = bio;
 
+  printk("pblk_alloc_w_rq\n");
   ret = pblk_alloc_w_rq(pblk, rqd, rq_ppas, pblk_end_io_write_snapshot);
   if (ret)
     goto fail_free_bio;
 
   for (i = 0; i < rqd->nr_ppas;) {
     spin_lock(&snapshot_line->lock);
+    printk("__pblk_alloc_page\n");
     paddr = __pblk_alloc_page(pblk, snapshot_line, rq_ppas);
     spin_unlock(&snapshot_line->lock);
     for (j = 0; j < rq_ppas; j++, i++, paddr++)
@@ -491,6 +493,8 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   }
 
   *snapshot_mem += rq_len;
+  printk("snapshot_mem = %lu\n", *snapshot_mem);
+
   if (*snapshot_mem >= map_size) {
     spin_lock(&l_mg->close_lock);
     list_del(&snapshot_line->list);
