@@ -1418,7 +1418,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   map_size = entry_size * pblk->rl.nr_secs;
   line_size = new_line->sec_in_line * geo->csecs;
   nr_lines = (unsigned long)map_size / line_size + 1;
-  printk("total capacity in line = %u", line_size);
+  printk("total capacity in line = %lu", line_size);
 
   for (i = 0; i < nr_lines; i++) {
     // get new line for snapshot
