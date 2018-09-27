@@ -766,7 +766,7 @@ int pblk_submit_io(struct pblk *pblk, struct nvm_rq *rqd);
 int pblk_submit_io_sync(struct pblk *pblk, struct nvm_rq *rqd);
 int pblk_submit_meta_io(struct pblk *pblk, struct pblk_line *meta_line);
 int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
-                            int *snapshot_mem, size_t map_size);
+                            unsigned long *snapshot_mem, size_t map_size);
 struct bio *pblk_bio_map_addr(struct pblk *pblk, void *data,
                               unsigned int nr_secs, unsigned int len,
                               int alloc_type, gfp_t gfp_mask);
