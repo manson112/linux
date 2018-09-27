@@ -748,6 +748,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
   int flags;
 
   if (dir == PBLK_WRITE) {
+    printk("pblk_line_submit_smeta_io write\n");
     bio_op = REQ_OP_WRITE;
     cmd_op = NVM_OP_PWRITE;
     flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
@@ -1133,6 +1134,7 @@ static int pblk_line_init_bb(struct pblk *pblk, struct pblk_line *line,
   line->smeta_ssec = off;
   line->cur_sec = off + lm->smeta_sec;
 
+  printk("before pblk_line_submit_smeta_io\n");
   if (init && pblk_line_submit_smeta_io(pblk, line, off, PBLK_WRITE)) {
     pr_debug("pblk: line smeta I/O failed. Retry\n");
     return 0;
@@ -1278,7 +1280,7 @@ int pblk_line_recov_alloc(struct pblk *pblk, struct pblk_line *line) {
   spin_unlock(&l_mg->free_lock);
 
   pblk_rl_free_lines_dec(&pblk->rl, line, true);
-
+  printk("befor pblk_line_init_bb");
   if (!pblk_line_init_bb(pblk, line, 0)) {
     list_add(&line->list, &l_mg->free_list);
     return -EINTR;
@@ -1501,22 +1503,21 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
   for (i = 0; i < nr_lines; i++) {
     // get new line for snapshot
-    prev_line = new_line;
-    new_line = pblk_line_replace_snapshot_data(pblk, i + 1);
-    pblk_line_close_meta(pblk, prev_line);
+    if (new_line->cur != new_line->smeta_ssec + pblk->lm.smeta_sec) {
+      prev_line = new_line;
+      new_line = pblk_line_replace_snapshot_data(pblk, i + 1);
+      pblk_line_close_meta(pblk, prev_line);
+    }
 
     // fail
     if (!new_line) {
       pr_err("pblk_start_snapshot: failed to start snapshot\n");
       return;
     }
-    printk("pblk_submit_snapshot_io\n");
 
     while (snapshot_mem < line_size) {
       int ret = 0;
-
       ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, line_size);
-      // snapshot_mem += pblk->min_write_pgs * geo->csecs;
       if (ret) {
         pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
                ret);
