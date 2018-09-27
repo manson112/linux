@@ -1414,6 +1414,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
     entry_size = 4;
   }
   map_size = entry_size * pblk->rl.nr_secs;
+  printk("pblk_line_replace_snapshot_data\n");
 
   // get new line for snapshot
   new_line = pblk_line_replace_snapshot_data(pblk);
@@ -1426,6 +1427,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   }
   while (snapshot_mem < map_size) {
     int ret;
+    printk("pblk_submit_snapshot_io\n");
 
     ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, map_size);
     if (ret) {
@@ -1464,6 +1466,7 @@ void __pblk_pipeline_flush(struct pblk *pblk) {
 
   flush_workqueue(pblk->bb_wq);
   // save snapshot
+  printk("__pblk_start_snapshot\n");
   __pblk_start_snapshot(pblk);
 
   pblk_line_close_meta_sync(pblk);
