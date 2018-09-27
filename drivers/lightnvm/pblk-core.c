@@ -722,121 +722,6 @@ free_rqd_dma:
   return ret;
 }
 
-static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
-                                      u64 paddr) {
-  struct nvm_tgt_dev *dev = pblk->dev;
-  struct nvm_geo *geo = &dev->geo;
-  void *ppa_list, *meta_list;
-  struct bio *bio;
-  struct nvm_rq rqd;
-  unsigned char *trans_map = pblk->trans_map;
-  dma_addr_t dma_ppa_list, dma_meta_list;
-  int left_ppas;
-  int min = pblk->min_write_pgs;
-  int id = line->id;
-  int rq_ppas, rq_len;
-  int cmd_op, bio_op;
-  int i, j;
-  int ret;
-  int entry_size = 8;
-
-  if (pblk->addrf_len < 32)
-    entry_size = 4;
-  printk("pblk_line_read_snapshot_io: entry_size = %d\n", entry_size);
-
-  left_ppas = pblk->rl.nr_secs * entry_size / geo->csecs;
-  printk("pblk_line_read_snapshot: left_ppas = %d\n", left_ppas);
-
-  bio_op = REQ_OP_READ;
-  cmd_op = NVM_OP_PREAD;
-
-  meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL, &dma_meta_list);
-  if (!meta_list)
-    return -ENOMEM;
-
-  ppa_list = meta_list + pblk_dma_meta_size;
-  dma_ppa_list = dma_meta_list + pblk_dma_meta_size;
-
-next_rq:
-  memset(&rqd, 0, sizeof(struct nvm_rq));
-
-  rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
-  rq_len = rq_ppas * geo->csecs;
-
-  printk("pblk_line_read_snapshot: rq_ppas = %d\n", rq_ppas);
-  printk("pblk_line_read_snapshot: rq_len = %d\n", rq_len);
-
-  bio = pblk_bio_map_addr(pblk, trans_map, rq_ppas, rq_len, PBLK_VMALLOC_META,
-                          GFP_KERNEL);
-  if (IS_ERR(bio)) {
-    ret = PTR_ERR(bio);
-    goto free_rqd_dma;
-  }
-
-  bio->bi_iter.bi_sector = 0; /* internal bio */
-  bio_set_op_attrs(bio, bio_op, 0);
-
-  rqd.bio = bio;
-  rqd.meta_list = meta_list;
-  rqd.ppa_list = ppa_list;
-  rqd.dma_meta_list = dma_meta_list;
-  rqd.dma_ppa_list = dma_ppa_list;
-  rqd.opcode = cmd_op;
-  rqd.nr_ppas = rq_ppas;
-
-  for (i = 0; i < rqd.nr_ppas;) {
-    struct ppa_addr ppa = addr_to_gen_ppa(pblk, paddr, id);
-    int pos = pblk_ppa_to_pos(geo, ppa);
-    int read_type = PBLK_READ_RANDOM;
-
-    if (pblk_io_aligned(pblk, rq_ppas))
-      read_type = PBLK_READ_SEQUENTIAL;
-    rqd.flags = pblk_set_read_mode(pblk, read_type);
-
-    while (test_bit(pos, line->blk_bitmap)) {
-      paddr += min;
-      if (pblk_boundary_paddr_checks(pblk, paddr)) {
-        pr_err("pblk: corrupt snapshot line:%d\n", line->id);
-        bio_put(bio);
-        ret = -EINTR;
-        goto free_rqd_dma;
-      }
-
-      ppa = addr_to_gen_ppa(pblk, paddr, id);
-      pos = pblk_ppa_to_pos(geo, ppa);
-    }
-
-    if (pblk_boundary_paddr_checks(pblk, paddr + min)) {
-      pr_err("pblk: corrupt snapshot line:%d\n", line->id);
-      bio_put(bio);
-      ret = -EINTR;
-      goto free_rqd_dma;
-    }
-
-    for (j = 0; j < min; j++, i++, paddr++)
-      rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
-  }
-  ret = pblk_submit_io_sync(pblk, &rqd);
-  if (ret) {
-    pr_err("pblk: emeta I/O submission failed: %d\n", ret);
-    bio_put(bio);
-    goto free_rqd_dma;
-  }
-
-  atomic_dec(&pblk->inflight_io);
-
-  if (rqd.error) {
-    pblk_log_read_err(pblk, &rqd);
-  }
-  trans_map += rq_len;
-  left_ppas -= rq_ppas;
-  if (left_ppas)
-    goto next_rq;
-free_rqd_dma:
-  nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
-  return ret;
-}
-
 u64 pblk_line_smeta_start(struct pblk *pblk, struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
@@ -953,11 +838,6 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
                          void *emeta_buf) {
   return pblk_line_submit_emeta_io(pblk, line, emeta_buf, line->emeta_ssec,
                                    PBLK_READ);
-}
-int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line) {
-  u64 bit = pblk_line_smeta_start(pblk, line) + pblk->lm.smeta_sec;
-  printk("pblk_line_read_snapshot: bit = %lu\n", (unsigned long)bit);
-  return pblk_line_read_snapshot_io(pblk, line, bit);
 }
 
 static void pblk_setup_e_rq(struct pblk *pblk, struct nvm_rq *rqd,
@@ -1522,31 +1402,32 @@ static void pblk_line_close_meta_sync(struct pblk *pblk) {
   flush_workqueue(pblk->close_wq);
 }
 static void __pblk_start_snapshot(struct pblk *pblk) {
-  struct nvm_tgt_dev *dev = pblk->dev;
-  struct nvm_geo *geo = &dev->geo;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
-  // struct pblk_line *prev_line = new_line;
+  struct pblk_line *prev_line = new_line;
   int entry_size = 8;
-  int snapshot_mem = 0;
+  int snapshot_mem;
   size_t map_size;
+
+  printk("__pblk_start_snapshot: new_line = %p\n", new_line);
+  printk("__pblk_start_snapshot: prev_line = %p\n", prev_line);
 
   if (pblk->addrf_len < 32) {
     entry_size = 4;
   }
-  map_size = entry_size * pblk->rl.nr_secs / geo->csecs;
+  map_size = entry_size * pblk->rl.nr_secs;
 
   // get new line for snapshot
-  if (new_line->sec_in_line + pblk->lm.smeta_sec + pblk->lm.emeta_sec[0] !=
-      (unsigned int)pblk->lm.sec_per_line)
-    new_line = pblk_line_replace_snapshot_data(pblk);
+  new_line = pblk_line_replace_snapshot_data(pblk);
+  printk("__pblk_start_snapshot: new_line = %p\n", new_line);
+  printk("__pblk_start_snapshot: prev_line = %p\n", prev_line);
   // pblk_line_close_meta(pblk, prev_line);
 
+  printk("after pblk line close meta\n");
   // fail
   if (!new_line) {
     pr_err("pblk_start_snapshot: failed to start snapshot\n");
     return;
   }
-  printk("pblk: submit snapshot line at %d\n", new_line->id);
   while (snapshot_mem < map_size) {
     int ret;
 
@@ -1636,7 +1517,6 @@ retry_erase:
   }
 
 retry_setup:
-  new->type = PBLK_LINETYPE_DATA;
   if (!pblk_line_init_metadata(pblk, new, cur)) {
     new = pblk_line_retry(pblk, new);
     if (!new)
@@ -1682,7 +1562,8 @@ struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk) {
 
   cur = l_mg->data_line;
   new = l_mg->data_next;
-
+  printk("cur pointer: %p\n", cur);
+  printk("new pointer: %p\n", new);
   if (!new)
     goto out;
   l_mg->data_line = new;
@@ -1930,7 +1811,9 @@ void pblk_line_close_meta(struct pblk *pblk, struct pblk_line *line) {
   if (line->emeta_ssec != line->cur_sec)
     line->emeta_ssec = line->cur_sec;
 
+  printk("before list_add_tail\n");
   list_add_tail(&line->list, &l_mg->emeta_list);
+  printk("after list_add_tail\n");
 
   spin_unlock(&line->lock);
   spin_unlock(&l_mg->close_lock);

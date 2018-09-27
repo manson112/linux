@@ -773,14 +773,13 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   struct pblk_line_meta *lm = &pblk->lm;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
   struct pblk_line *line, *tline, *data_line = NULL;
-  struct pblk_line *snapshot_line;
   struct pblk_smeta *smeta;
   struct pblk_emeta *emeta;
   struct line_smeta *smeta_buf;
   int found_lines = 0, recovered_lines = 0, open_lines = 0;
   int is_next = 0;
   int meta_line;
-  int i, snapshot_line_index, valid_uuid = 0;
+  int i, valid_uuid = 0;
   LIST_HEAD(recov_list);
 
   /* TODO: Implement FTL snapshot */
@@ -842,14 +841,6 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     line->seq_nr = le64_to_cpu(smeta_buf->seq_nr);
     spin_unlock(&line->lock);
 
-    /* for snapshot */
-    if (line->type == PBLK_LINETYPE_LOG) {
-      snapshot_line_index = i;
-      snapshot_line = line;
-      bitmap_clear(line->erase_bitmap, 0, lm->blk_bitmap_len);
-      printk("snapshot_line: [%d]%p\n", snapshot_line_index, snapshot_line);
-    }
-
     /* Update general metadata */
     spin_lock(&l_mg->free_lock);
     if (line->seq_nr >= l_mg->d_seq_nr)
@@ -859,12 +850,11 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
 
     if (pblk_line_recov_alloc(pblk, line))
       goto out;
-    if (line->type != PBLK_LINETYPE_LOG) {
-      pblk_recov_line_add_ordered(&recov_list, line);
-      found_lines++;
-      pr_debug("pblk: recovering data line %d, seq:%llu\n", line->id,
-               smeta_buf->seq_nr);
-    }
+
+    pblk_recov_line_add_ordered(&recov_list, line);
+    found_lines++;
+    pr_debug("pblk: recovering data line %d, seq:%llu\n", line->id,
+             smeta_buf->seq_nr);
   }
 
   if (!found_lines) {
@@ -877,51 +867,6 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     goto out;
   }
 
-  /* recov l2p from snapshot */
-  if (snapshot_line) {
-    struct list_head *move_list;
-    /* pblk_line_read_snapshot 만들기 */
-    if (pblk_line_read_snapshot(pblk, snapshot_line)) {
-      pr_err("pblk_recov_l2p: pblk_line_read_snapshot error");
-      spin_lock(&snapshot_line->lock);
-      snapshot_line->state = PBLK_LINESTATE_CLOSED;
-      move_list = pblk_line_gc_list(pblk, snapshot_line);
-      spin_unlock(&snapshot_line->lock);
-
-      spin_lock(&l_mg->gc_lock);
-      list_move_tail(&snapshot_line->list, move_list);
-      spin_unlock(&l_mg->gc_lock);
-
-      kfree(snapshot_line->map_bitmap);
-      snapshot_line->map_bitmap = NULL;
-      snapshot_line->smeta = NULL;
-      snapshot_line->emeta = NULL;
-      goto recov_l2p_from_emeta;
-    }
-    printk("pblk_line_read_snapshot success!\n");
-    /* erase bit map 세팅 / 이부분 위치 조정 */
-    // *snapshot_line->vsc = cpu_to_le32(0);
-    spin_lock(&snapshot_line->lock);
-    snapshot_line->state = PBLK_LINESTATE_CLOSED;
-    move_list = pblk_line_gc_list(pblk, snapshot_line);
-    spin_unlock(&snapshot_line->lock);
-
-    spin_lock(&l_mg->gc_lock);
-    list_move_tail(&snapshot_line->list, move_list);
-    spin_unlock(&l_mg->gc_lock);
-
-    kfree(snapshot_line->map_bitmap);
-    snapshot_line->map_bitmap = NULL;
-    snapshot_line->smeta = NULL;
-    snapshot_line->emeta = NULL;
-
-    recovered_lines = found_lines;
-    goto out;
-  } else {
-    pr_info("no snapshot\n");
-  }
-
-recov_l2p_from_emeta:
   /* Verify closed blocks and recover this portion of L2P table*/
   list_for_each_entry_safe(line, tline, &recov_list, list) {
     recovered_lines++;
