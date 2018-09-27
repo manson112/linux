@@ -352,6 +352,7 @@ struct line_smeta {
   /* Current line metadata */
   __le64 seq_nr; /* Sequence number for current line */
 
+  __le64 snapshot_seq_nr;
   /* Active writers */
   __le32 window_wr_lun; /* Number of parallel LUNs to write */
 

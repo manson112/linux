@@ -28,7 +28,8 @@ int pblk_recov_check_emeta(struct pblk *pblk, struct line_emeta *emeta_buf) {
 
   return 0;
 }
-
+static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
+                                        struct pblk_line *line) {}
 static int pblk_recov_l2p_from_emeta(struct pblk *pblk,
                                      struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
@@ -691,6 +692,15 @@ static void pblk_recov_line_add_ordered(struct list_head *head,
 
   __list_add(&line->list, t->list.prev, &t->list);
 }
+static void pblk_snapshot_line_add_ordered(struct list_head *head,
+                                           struct pblk_line *line) {
+  struct pblk_line *t = NULL;
+
+  list_for_each_entry(t, head, list) if (t->snapshot_seq_nr >
+                                         line->snapshot_seq_nr) break;
+
+  __list_add(&line->list, t->list.prev, &t->list);
+}
 
 static u64 pblk_line_emeta_start(struct pblk *pblk, struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
@@ -781,6 +791,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   int meta_line;
   int i, valid_uuid = 0;
   LIST_HEAD(recov_list);
+  LIST_HEAD(snapshot_list);
 
   /* TODO: Implement FTL snapshot */
 
@@ -850,11 +861,14 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
 
     if (pblk_line_recov_alloc(pblk, line))
       goto out;
-
-    pblk_recov_line_add_ordered(&recov_list, line);
-    found_lines++;
-    pr_debug("pblk: recovering data line %d, seq:%llu\n", line->id,
-             smeta_buf->seq_nr);
+    if (line->type == PBLK_LINETYPE_LOG) {
+      pblk_snapshot_line_add_ordered(&snapshot_list, line);
+    } else {
+      pblk_recov_line_add_ordered(&recov_list, line);
+      found_lines++;
+      pr_debug("pblk: recovering data line %d, seq:%llu\n", line->id,
+               smeta_buf->seq_nr);
+    }
   }
 
   if (!found_lines) {
@@ -865,6 +879,10 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     spin_unlock(&l_mg->free_lock);
 
     goto out;
+  }
+  list_for_each_entry_safe(line, tline, &snapshot_list, list) {
+    printk("snapshot line[%d]\n", line->id);
+    pblk_recov_l2p_from_snapshot(pblk, line);
   }
 
   /* Verify closed blocks and recover this portion of L2P table*/
