@@ -443,7 +443,8 @@ fail_free_rqd:
 }
 
 int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
-                            unsigned long *snapshot_mem, size_t map_size) {
+                            unsigned long *snapshot_mem,
+                            unsigned long line_size) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
@@ -495,7 +496,7 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   *snapshot_mem += rq_len;
   printk("snapshot_mem = %lu\n", *snapshot_mem);
 
-  if (*snapshot_mem >= map_size) {
+  if (*snapshot_mem >= line_size) {
     spin_lock(&l_mg->close_lock);
     list_del(&snapshot_line->list);
     spin_unlock(&l_mg->close_lock);

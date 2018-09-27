@@ -1424,19 +1424,20 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
     // get new line for snapshot
     prev_line = new_line;
     new_line = pblk_line_replace_snapshot_data(pblk);
-    // pblk_line_close_meta(pblk, prev_line);
+    pblk_line_close_meta(pblk, prev_line);
 
     // fail
     if (!new_line) {
       pr_err("pblk_start_snapshot: failed to start snapshot\n");
       return;
     }
+    printk("pblk_submit_snapshot_io\n");
+
     while (snapshot_mem < line_size) {
       int ret = 0;
-      printk("pblk_submit_snapshot_io\n");
 
-      // ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, map_size);
-      snapshot_mem += pblk->min_write_pgs * geo->csecs;
+      ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, line_size);
+      // snapshot_mem += pblk->min_write_pgs * geo->csecs;
       if (ret) {
         pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
                ret);
