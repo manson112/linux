@@ -1426,10 +1426,11 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
     return;
   }
   while (snapshot_mem < map_size) {
-    int ret;
+    int ret = 0;
     printk("pblk_submit_snapshot_io\n");
 
-    ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, map_size);
+    // ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, map_size);
+    snapshot_mem += pblk->min_write_pgs * geo->csecs;
     if (ret) {
       pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
              ret);
