@@ -1065,7 +1065,7 @@ static int pblk_line_init_snapshot_metadata(struct pblk *pblk,
   smeta_buf->header.version_minor = SMETA_VERSION_MINOR;
   /* Start metadata */
   smeta_buf->seq_nr = cpu_to_le64(line->seq_nr);
-  smeta_buf->snapshot_seq_nr = cpu_to_le64(snapshot_seq_nr);
+  smeta_buf->snapshot_seq_nr = cpu_to_le64(line->snapshot_seq_nr);
   smeta_buf->window_wr_lun = cpu_to_le32(geo->all_luns);
 
   /* Fill metadata among lines */
