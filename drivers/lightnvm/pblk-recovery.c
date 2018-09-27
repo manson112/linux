@@ -854,7 +854,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     line->type = le16_to_cpu(smeta_buf->header.type);
     line->seq_nr = le64_to_cpu(smeta_buf->seq_nr);
     line->snapshot_seq_nr = le64_to_cpu(smeta_buf->snapshot_seq_nr);
-    smeta_buf->type = cpu_to_le16(PBLK_LINETYPE_DATA);
+    smeta_buf->header.type = cpu_to_le16(PBLK_LINETYPE_DATA);
     smeta_buf->snapshot_seq_nr = cpu_to_le64(0);
     spin_unlock(&line->lock);
 
