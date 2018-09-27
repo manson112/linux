@@ -257,6 +257,7 @@ static void pblk_end_io_write(struct nvm_rq *rqd) {
 static void pblk_end_io_write_snapshot(struct nvm_rq *rqd) {
   struct pblk *pblk = rqd->private;
   struct pblk_g_ctx *s_ctx = nvm_rq_to_pdu(rqd);
+  struct pblk_line *line = s_ctx->private;
   pblk_up_page(pblk, rqd->ppa_list, rqd->nr_ppas);
 
   if (rqd->error) {
