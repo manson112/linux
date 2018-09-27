@@ -443,7 +443,7 @@ fail_free_rqd:
 }
 
 int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
-                            int *snapshot_mem, size_t map_size) {
+                            unsigned long *snapshot_mem, size_t map_size) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
