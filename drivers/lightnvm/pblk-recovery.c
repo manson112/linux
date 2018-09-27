@@ -850,6 +850,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     line->id = le32_to_cpu(smeta_buf->header.id);
     line->type = le16_to_cpu(smeta_buf->header.type);
     line->seq_nr = le64_to_cpu(smeta_buf->seq_nr);
+    line->snapshot_seq_nr = le64_to_cpu(smeta_buf->snapshot_seq_nr);
     spin_unlock(&line->lock);
 
     /* Update general metadata */

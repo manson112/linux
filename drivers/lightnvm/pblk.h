@@ -427,6 +427,7 @@ struct pblk_line {
                         * block line
                         */
   unsigned int seq_nr; /* Unique line sequence number */
+  int snapshot_seq_nr;
 
   int state;             /* PBLK_LINESTATE_X */
   int type;              /* PBLK_LINETYPE_X */

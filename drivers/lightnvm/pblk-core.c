@@ -1022,8 +1022,7 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 }
 static int pblk_line_init_snapshot_metadata(struct pblk *pblk,
                                             struct pblk_line *line,
-                                            struct pblk_line *cur,
-                                            int snapshot_seq_nr) {
+                                            struct pblk_line *cur) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   struct pblk_line_meta *lm = &pblk->lm;
@@ -1675,7 +1674,8 @@ retry_erase:
 
 retry_setup:
   new->type = PBLK_LINETYPE_LOG;
-  if (!pblk_line_init_snapshot_metadata(pblk, new, cur, snapshot_seq_nr)) {
+  new->snapshot_seq_nr = snapshot_seq_nr;
+  if (!pblk_line_init_snapshot_metadata(pblk, new, cur)) {
     new = pblk_line_retry(pblk, new);
     if (!new)
       goto out;
