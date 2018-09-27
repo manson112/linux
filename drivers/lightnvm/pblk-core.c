@@ -754,7 +754,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
     cmd_op = NVM_OP_PWRITE;
     flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
     printk("pblk_line_submit_smeta_io: smeta type = %d\n",
-           le16_to_cpu(smeta_uf->header.type));
+           le16_to_cpu(smeta_buf->header.type));
 
     lba_list = emeta_to_lbas(pblk, line->emeta->buf);
   } else if (dir == PBLK_READ_RECOV || dir == PBLK_READ) {
