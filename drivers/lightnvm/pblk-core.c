@@ -1433,7 +1433,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
              ret);
       return;
     }
-    printk("pblk_start_snapshot: snapshot saved %lu \n", snapshot_mem,
+    printk("pblk_start_snapshot: snapshot saved %lu / %u \n", snapshot_mem,
            (unsigned int)map_size);
   }
 
