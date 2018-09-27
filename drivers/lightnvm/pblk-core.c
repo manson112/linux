@@ -741,6 +741,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
   struct nvm_tgt_dev *dev = pblk->dev;
   struct pblk_line_meta *lm = &pblk->lm;
   struct bio *bio;
+  struct line_smeta *smeta_buf = (struct line_smeta *)line->smeta;
   struct nvm_rq rqd;
   __le64 *lba_list = NULL;
   int i, ret;
@@ -753,7 +754,7 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
     cmd_op = NVM_OP_PWRITE;
     flags = pblk_set_progr_mode(pblk, PBLK_WRITE);
     printk("pblk_line_submit_smeta_io: smeta type = %d\n",
-           le16_to_cpu(line->smeta->buf->header.type));
+           le16_to_cpu(smeta_uf->header.type));
 
     lba_list = emeta_to_lbas(pblk, line->emeta->buf);
   } else if (dir == PBLK_READ_RECOV || dir == PBLK_READ) {
