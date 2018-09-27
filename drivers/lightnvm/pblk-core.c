@@ -1425,6 +1425,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
     pr_err("pblk_start_snapshot: failed to start snapshot\n");
     return;
   }
+  printk("total capacity in line = %u", new_line->sec_in_line * geo->csecs);
   while (snapshot_mem < map_size) {
     int ret = 0;
     printk("pblk_submit_snapshot_io\n");
