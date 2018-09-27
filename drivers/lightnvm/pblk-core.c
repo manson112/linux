@@ -1503,7 +1503,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
   for (i = 0; i < nr_lines; i++) {
     // get new line for snapshot
-    if (new_line->cur != new_line->smeta_ssec + pblk->lm.smeta_sec) {
+    if (new_line->cur_sec != new_line->smeta_ssec + pblk->lm.smeta_sec) {
       prev_line = new_line;
       new_line = pblk_line_replace_snapshot_data(pblk, i + 1);
       pblk_line_close_meta(pblk, prev_line);
