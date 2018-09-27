@@ -1605,6 +1605,8 @@ retry_erase:
   }
 
 retry_setup:
+  new->type = PBLK_LINETYPE_DATA;
+  new->snapshot_seq_nr = 0;
   if (!pblk_line_init_metadata(pblk, new, cur)) {
     new = pblk_line_retry(pblk, new);
     if (!new)
