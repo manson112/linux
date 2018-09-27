@@ -29,7 +29,10 @@ int pblk_recov_check_emeta(struct pblk *pblk, struct line_emeta *emeta_buf) {
   return 0;
 }
 static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
-                                        struct pblk_line *line) {}
+                                        struct pblk_line *line) {
+  line->type = PBLK_LINETYPE_DATA;
+  line->snapshot_seq_nr = 0;
+}
 static int pblk_recov_l2p_from_emeta(struct pblk *pblk,
                                      struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
