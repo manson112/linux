@@ -500,11 +500,11 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   *snapshot_mem += rq_len;
   printk("snapshot_mem = %lu\n", *snapshot_mem);
 
-  if (*snapshot_mem >= line_size) {
-    spin_lock(&l_mg->close_lock);
-    list_del(&snapshot_line->list);
-    spin_unlock(&l_mg->close_lock);
-  }
+  // if (*snapshot_mem >= line_size) {
+  //   spin_lock(&l_mg->close_lock);
+  //   list_del(&snapshot_line->list);
+  //   spin_unlock(&l_mg->close_lock);
+  // }
 
   pblk_down_page(pblk, rqd->ppa_list, rqd->nr_ppas);
 
