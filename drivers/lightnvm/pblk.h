@@ -505,6 +505,9 @@ struct pblk_line_mgmt {
   struct list_head gc_full_list;  /* Full lines ready to GC, no valid */
   struct list_head gc_empty_list; /* Full lines close, all valid */
 
+  /* Snapshot list */
+  struct list_head snapshot_list;
+
   struct pblk_line *log_line;  /* Current FTL log line */
   struct pblk_line *data_line; /* Current data line */
   struct pblk_line *log_next;  /* Next FTL log line */

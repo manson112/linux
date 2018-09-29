@@ -793,6 +793,9 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   int is_next = 0;
   int meta_line;
   int i, valid_uuid = 0;
+  unsigned long nSTime;
+  unsigned long nETime;
+  struct timeval str, end;
   LIST_HEAD(recov_list);
   LIST_HEAD(snapshot_list);
 
@@ -807,6 +810,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   smeta_buf = (struct line_smeta *)smeta;
   spin_unlock(&l_mg->free_lock);
 
+  do_gettimeofday(&str);
+  printk("read smeta start : [%lu]\n", (unsigned long)str.tv_sec);
   /* Order data lines using their sequence number */
   for (i = 0; i < l_mg->nr_lines; i++) {
     u32 crc;
@@ -854,10 +859,6 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     line->type = le16_to_cpu(smeta_buf->header.type);
     line->seq_nr = le64_to_cpu(smeta_buf->seq_nr);
     line->snapshot_seq_nr = le64_to_cpu(smeta_buf->snapshot_seq_nr);
-    printk("line meta data: seq_nr = %u\n", line->seq_nr);
-    printk("line meta data: snapshot_seq_nr = %d\n", line->snapshot_seq_nr);
-    smeta_buf->header.type = cpu_to_le16(PBLK_LINETYPE_DATA);
-    smeta_buf->snapshot_seq_nr = cpu_to_le64(0);
     spin_unlock(&line->lock);
 
     /* Update general metadata */
@@ -870,7 +871,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     if (pblk_line_recov_alloc(pblk, line))
       goto out;
     if (line->type == PBLK_LINETYPE_LOG) {
-      pblk_snapshot_line_add_ordered(&snapshot_list, line);
+      pblk_snapshot_line_add_ordered(&l_mg->snapshot_list, line);
     } else {
       pblk_recov_line_add_ordered(&recov_list, line);
       found_lines++;
@@ -878,6 +879,11 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
                smeta_buf->seq_nr);
     }
   }
+  do_gettimeofday(&end);
+  printk("read smeta end : [%lu]\n", (unsigned long)end.tv_sec);
+  nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+  nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+  printk("diff : [%lu]\n", nETime - nSTime);
 
   if (!found_lines) {
     pblk_setup_uuid(pblk);
@@ -888,12 +894,22 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
 
     goto out;
   }
-  list_for_each_entry_safe(line, tline, &snapshot_list, list) {
+  do_gettimeofday(&str);
+  printk("recover from snapshot start : [%lu]\n", (unsigned long)str.tv_sec);
+  list_for_each_entry_safe(line, tline, &l_mg->snapshot_list, list) {
     printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
            line->id);
     pblk_recov_l2p_from_snapshot(pblk, line);
   }
 
+  do_gettimeofday(&end);
+  printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
+  nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+  nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+  printk("diff : [%lu]\n", nETime - nSTime);
+  do_gettimeofday(&str);
+
+  printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
   /* Verify closed blocks and recover this portion of L2P table*/
   list_for_each_entry_safe(line, tline, &recov_list, list) {
     recovered_lines++;
@@ -946,6 +962,11 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
       data_line = line;
     }
   }
+  do_gettimeofday(&end);
+  printk("recover from emeta end : [%lu]\n", (unsigned long)end.tv_sec);
+  nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+  nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+  printk("diff : [%lu]\n", nETime - nSTime);
 
   spin_lock(&l_mg->free_lock);
   if (!open_lines) {

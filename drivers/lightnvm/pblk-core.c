@@ -1489,6 +1489,9 @@ static void pblk_line_close_meta_sync(struct pblk *pblk) {
 static void __pblk_start_snapshot(struct pblk *pblk) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
+  struct pblk_line_mgmt *l_mg = &pblk->l_mg;
+  struct pblk_line_meta *lm = &pblk->lm;
+  struct pblk_line *line;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   struct pblk_line *prev_line = new_line;
   int entry_size = 8;
@@ -1501,39 +1504,77 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
     entry_size = 4;
   }
   map_size = entry_size * pblk->rl.nr_secs;
-  line_size = new_line->sec_in_line * geo->csecs;
-  nr_lines = (unsigned long)map_size / line_size + 1;
-  printk("total capacity in line = %lu", line_size);
 
-  for (i = 0; i < nr_lines; i++) {
+  if (list_empty(&l_mg->snapshot_list)) {
+    for (i = 0; i < nr_lines; i++) {
     // get new line for snapshot
-    if (new_line->cur_sec != new_line->smeta_ssec + pblk->lm.smeta_sec) {
-      prev_line = new_line;
-      new_line = pblk_line_replace_snapshot_data(pblk, i + 1);
-      pblk_line_close_meta(pblk, prev_line);
-    }
-
-    // fail
-    if (!new_line) {
-      pr_err("pblk_start_snapshot: failed to start snapshot\n");
-      return;
-    }
-
-    while (snapshot_mem < line_size) {
-      int ret = 0;
-      ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, line_size);
-      if (ret) {
-        pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
-               ret);
-        return;
+    retry:
+      if (new_line->sec_in_line != new_line->left_msecs) {
+        prev_line = new_line;
+        new_line = pblk_line_replace_snapshot_data(pblk, i + 1);
+        pblk_line_close_meta(pblk, prev_line);
+        goto retry;
       }
-      printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
-             new_line->id, snapshot_mem, line_size);
+      line_size = new_line->sec_in_line * geo->csecs;
+      nr_lines = (unsigned long)map_size / line_size + 1;
+      // fail
+      if (!new_line) {
+        pr_err("pblk_start_snapshot: failed to start snapshot\n");
+        goto out;
+      }
+
+      while (snapshot_mem < line_size) {
+        int ret = 0;
+        ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, line_size);
+        if (ret) {
+          pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
+                 ret);
+          goto out;
+        }
+        printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+               new_line->id, snapshot_mem, line_size);
+      }
+      line_size = (unsigned long)map_size - snapshot_mem;
+      snapshot_mem = 0;
+      pblk_wait_for_snapshot(pblk);
     }
-    line_size = (unsigned long)map_size - snapshot_mem;
-    snapshot_mem = 0;
-    pblk_wait_for_snapshot(pblk);
+  } else {
+    list_for_each_entry_safe(line, tline, &l_mg->snapshot_list, list) {
+      printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
+             line->id);
+      bitmap_clear(line->erase_bitmap, 0, lm->blk_per_line);
+      if (pblk_line_erase(pblk, line)) {
+        /* line erase fail */
+        pr_err("erase snapshot line error\n");
+        goto out;
+      } else {
+        /* wrtie new snapshot */
+        line_size = line->sec_in_line * geo->csecs;
+
+        if (pblk_line_setup_snapshot(pblk, line, i + 1)) {
+          pr_err("setup metadata for snapshot failed\n");
+          goto out;
+        }
+
+        while (snapshot_mem < line_size) {
+          int ret = 0;
+          ret = pblk_submit_snapshot_io(pblk, line, &snapshot_mem, line_size);
+          if (ret) {
+            pr_err("pblk: submit snapshot line to %d failed (%d)\n",
+                   new_line->id, ret);
+            goto out;
+          }
+          printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+                 line->id, snapshot_mem, line_size);
+        }
+        line_size = (unsigned long)map_size - snapshot_mem;
+        snapshot_mem = 0;
+        pblk_wait_for_snapshot(pblk);
+      }
+    }
   }
+out:
+  return;
 }
 
 void __pblk_pipeline_flush(struct pblk *pblk) {
@@ -1649,7 +1690,53 @@ retry_setup:
 out:
   return new;
 }
+static int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
+                                    int snapshot_seq_nr) {
+  struct pblk_line_mgmt *l_mg = &pblk->l_mg;
+  int ret = 1;
+  if (!new)
+    goto out;
 
+  spin_lock(&l_mg->free_lock);
+  pblk_line_setup_metadata(new, l_mg, &pblk->lm);
+  spin_unlock(&l_mg->free_lock);
+
+retry_erase:
+  left_seblks = atomic_read(&new->left_seblks);
+  if (left_seblks) {
+    /* If line is not fully erased, erase it */
+    if (atomic_read(&new->left_eblks)) {
+      if (pblk_line_erase(pblk, new))
+        goto out;
+    } else {
+      io_schedule();
+    }
+    goto retry_erase;
+  }
+
+retry_setup:
+  new->type = PBLK_LINETYPE_LOG;
+  new->snapshot_seq_nr = snapshot_seq_nr;
+  if (!pblk_line_init_snapshot_metadata(pblk, new, cur)) {
+    new = pblk_line_retry(pblk, new);
+    if (!new)
+      goto out;
+
+    goto retry_setup;
+  }
+
+  if (!pblk_line_init_bb(pblk, new, 1)) {
+    new = pblk_line_retry(pblk, new);
+    if (!new)
+      goto out;
+
+    goto retry_setup;
+  }
+  ret = 0;
+
+out:
+  return ret;
+}
 struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk,
                                                   int snapshot_seq_nr) {
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;

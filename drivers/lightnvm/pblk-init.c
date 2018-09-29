@@ -842,6 +842,9 @@ static int pblk_line_mg_init(struct pblk *pblk) {
   INIT_LIST_HEAD(&l_mg->gc_empty_list);
   INIT_LIST_HEAD(&l_mg->gc_werr_list);
 
+  /* add snapshot list */
+  INIT_LIST_HEAD(&l_mg->snapshot_list);
+
   INIT_LIST_HEAD(&l_mg->emeta_list);
 
   l_mg->gc_lists[0] = &l_mg->gc_werr_list;
