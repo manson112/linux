@@ -269,6 +269,10 @@ static void pblk_end_io_write_snapshot(struct nvm_rq *rqd) {
   else
     WARN_ONCE(rqd->bio->bi_status, "pblk: corrupted write snapshot error\n");
 #endif
+  if (line->left_msecs == 0) {
+    pblk_gen_run_ws(pblk, line, NULL, pblk_line_close_ws, GFP_ATOMIC,
+                    pblk->close_wq);
+  }
 
   pblk_free_rqd(pblk, rqd, PBLK_WRITE_INT);
 
