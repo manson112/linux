@@ -1575,6 +1575,9 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   map_size = entry_size * pblk->rl.nr_secs;
 
   if (list_empty(&l_mg->snapshot_list)) {
+    printk("snapshot list empty");
+    line_size = new_line->sec_in_line * geo->csecs;
+    nr_lines = (unsigned long)map_size / line_size + 1;
     for (i = 0; i < nr_lines; i++) {
     // get new line for snapshot
     retry:
@@ -1584,8 +1587,6 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
         pblk_line_close_meta(pblk, prev_line);
         goto retry;
       }
-      line_size = new_line->sec_in_line * geo->csecs;
-      nr_lines = (unsigned long)map_size / line_size + 1;
       // fail
       if (!new_line) {
         pr_err("pblk_start_snapshot: failed to start snapshot\n");
