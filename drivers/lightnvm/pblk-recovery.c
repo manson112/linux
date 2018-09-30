@@ -51,7 +51,7 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
 
   trans_map =
       ((void *)trans_map + (line_secs * (snapshot_seq_nr - 1) / geo->csecs));
-  if (pblk->nr_snapshot_lines == snapshot_seq_nr) {
+  if (pblk->l_mg.nr_snapshot_lines == snapshot_seq_nr) {
     left_ppas = total_snapshot_secs % line_secs;
   }
 
