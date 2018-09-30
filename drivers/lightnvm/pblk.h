@@ -834,6 +834,8 @@ void pblk_lookup_l2p_seq(struct pblk *pblk, struct ppa_addr *ppas,
                          sector_t blba, int nr_secs);
 struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk,
                                                   int snapshot_seq_nr);
+int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
+                             int snapshot_seq_nr);
 /*
  * pblk user I/O write path
  */

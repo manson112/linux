@@ -1025,6 +1025,75 @@ static int pblk_line_init_metadata(struct pblk *pblk, struct pblk_line *line,
 
   return 1;
 }
+static int pblk_line_init_snapshot_metadata_exist(struct pblk *pblk,
+                                                  struct pblk_line *line) {
+  struct nvm_tgt_dev *dev = pblk->dev;
+  struct nvm_geo *geo = &dev->geo;
+  struct pblk_line_meta *lm = &pblk->lm;
+  struct pblk_line_mgmt *l_mg = &pblk->l_mg;
+  struct pblk_emeta *emeta = line->emeta;
+  struct line_emeta *emeta_buf = emeta->buf;
+  struct line_smeta *smeta_buf = (struct line_smeta *)line->smeta;
+  int nr_blk_line;
+
+  /* After erasing the line, new bad blocks might appear and we risk
+   * having an invalid line
+   */
+  nr_blk_line =
+      lm->blk_per_line - bitmap_weight(line->blk_bitmap, lm->blk_per_line);
+  if (nr_blk_line < lm->min_blk_line) {
+    spin_lock(&l_mg->free_lock);
+    spin_lock(&line->lock);
+    line->state = PBLK_LINESTATE_BAD;
+    spin_unlock(&line->lock);
+
+    list_add_tail(&line->list, &l_mg->bad_list);
+    spin_unlock(&l_mg->free_lock);
+
+    pr_debug("pblk: line %d is bad\n", line->id);
+
+    return 0;
+  }
+
+  /* Run-time metadata */
+  line->lun_bitmap = ((void *)(smeta_buf)) + sizeof(struct line_smeta);
+
+  /* Mark LUNs allocated in this line (all for now) */
+  bitmap_set(line->lun_bitmap, 0, lm->lun_bitmap_len);
+
+  smeta_buf->header.identifier = cpu_to_le32(PBLK_MAGIC);
+  memcpy(smeta_buf->header.uuid, pblk->instance_uuid, 16);
+  smeta_buf->header.id = cpu_to_le32(line->id);
+  smeta_buf->header.type = cpu_to_le16(line->type);
+  smeta_buf->header.version_major = SMETA_VERSION_MAJOR;
+  smeta_buf->header.version_minor = SMETA_VERSION_MINOR;
+  /* Start metadata */
+  smeta_buf->seq_nr = cpu_to_le64(line->seq_nr);
+  smeta_buf->snapshot_seq_nr = cpu_to_le64(line->snapshot_seq_nr);
+  smeta_buf->window_wr_lun = cpu_to_le32(geo->all_luns);
+
+  /* All smeta must be set at this point */
+  smeta_buf->header.crc =
+      cpu_to_le32(pblk_calc_meta_header_crc(pblk, &smeta_buf->header));
+  smeta_buf->crc = cpu_to_le32(pblk_calc_smeta_crc(pblk, smeta_buf));
+
+  /* End metadata */
+  memcpy(&emeta_buf->header, &smeta_buf->header, sizeof(struct line_header));
+
+  emeta_buf->header.version_major = EMETA_VERSION_MAJOR;
+  emeta_buf->header.version_minor = EMETA_VERSION_MINOR;
+  emeta_buf->header.crc =
+      cpu_to_le32(pblk_calc_meta_header_crc(pblk, &emeta_buf->header));
+
+  emeta_buf->seq_nr = cpu_to_le64(line->seq_nr);
+  emeta_buf->nr_lbas = cpu_to_le64(line->sec_in_line);
+  emeta_buf->nr_valid_lbas = cpu_to_le64(0);
+  emeta_buf->next_id = cpu_to_le32(PBLK_LINE_EMPTY);
+  emeta_buf->crc = cpu_to_le32(0);
+  emeta_buf->prev_id = smeta_buf->prev_id;
+
+  return 1;
+}
 static int pblk_line_init_snapshot_metadata(struct pblk *pblk,
                                             struct pblk_line *line,
                                             struct pblk_line *cur) {
@@ -1491,7 +1560,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   struct nvm_geo *geo = &dev->geo;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
   struct pblk_line_meta *lm = &pblk->lm;
-  struct pblk_line *line;
+  struct pblk_line *line, *tline;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   struct pblk_line *prev_line = new_line;
   int entry_size = 8;
@@ -1690,9 +1759,10 @@ retry_setup:
 out:
   return new;
 }
-static int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
-                                    int snapshot_seq_nr) {
+int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
+                             int snapshot_seq_nr) {
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
+  unsigned int left_seblks;
   int ret = 1;
   if (!new)
     goto out;
@@ -1717,7 +1787,7 @@ retry_erase:
 retry_setup:
   new->type = PBLK_LINETYPE_LOG;
   new->snapshot_seq_nr = snapshot_seq_nr;
-  if (!pblk_line_init_snapshot_metadata(pblk, new, cur)) {
+  if (!pblk_line_init_snapshot_metadata_exist(pblk, new)) {
     new = pblk_line_retry(pblk, new);
     if (!new)
       goto out;
