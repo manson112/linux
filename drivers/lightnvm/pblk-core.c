@@ -1608,6 +1608,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
       pblk_wait_for_snapshot(pblk);
     }
   } else {
+    i = 1;
     list_for_each_entry_safe(line, tline, &l_mg->snapshot_list, list) {
       printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
              line->id);
@@ -1620,7 +1621,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
         /* wrtie new snapshot */
         line_size = line->sec_in_line * geo->csecs;
 
-        if (pblk_line_setup_snapshot(pblk, line, i + 1)) {
+        if (pblk_line_setup_snapshot(pblk, line, i++)) {
           pr_err("setup metadata for snapshot failed\n");
           goto out;
         }
