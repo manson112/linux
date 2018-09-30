@@ -256,7 +256,7 @@ static void pblk_end_io_write(struct nvm_rq *rqd) {
 }
 static void pblk_end_io_write_snapshot(struct nvm_rq *rqd) {
   struct pblk *pblk = rqd->private;
-  struct pblk_c_ctx *s_ctx = nvm_rq_to_pdu(rqd);
+  struct pblk_g_ctx *s_ctx = nvm_rq_to_pdu(rqd);
   struct pblk_line *line = s_ctx->private;
   pblk_up_page(pblk, rqd->ppa_list, rqd->nr_ppas);
 
@@ -269,9 +269,8 @@ static void pblk_end_io_write_snapshot(struct nvm_rq *rqd) {
   else
     WARN_ONCE(rqd->bio->bi_status, "pblk: corrupted write snapshot error\n");
 #endif
-  pblk_complete_write(pblk, rqd, s_ctx);
 
-  // pblk_free_rqd(pblk, rqd, PBLK_WRITE_INT);
+  pblk_free_rqd(pblk, rqd, PBLK_WRITE_INT);
 
   atomic_dec(&pblk->inflight_io);
 }
@@ -453,7 +452,7 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
-  struct pblk_c_ctx *s_ctx;
+  struct pblk_g_ctx *s_ctx;
   struct bio *bio;
   struct nvm_rq *rqd;
   unsigned char *trans_map = pblk->trans_map;
