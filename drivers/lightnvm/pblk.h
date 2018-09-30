@@ -488,6 +488,7 @@ enum {
 struct pblk_line_mgmt {
   int nr_lines;      /* Total number of full lines */
   int nr_free_lines; /* Number of full lines in free list */
+  int nr_snapshot_lines;
 
   /* Free lists - use free_lock */
   struct list_head free_list;    /* Full lines ready to use */
@@ -836,6 +837,8 @@ struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk,
                                                   int snapshot_seq_nr);
 int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
                              int snapshot_seq_nr);
+int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
+                            int left_ppas, unsigned char *trans_map);
 /*
  * pblk user I/O write path
  */

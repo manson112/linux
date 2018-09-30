@@ -28,11 +28,38 @@ int pblk_recov_check_emeta(struct pblk *pblk, struct line_emeta *emeta_buf) {
 
   return 0;
 }
+
 static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
                                         struct pblk_line *line) {
-  line->type = PBLK_LINETYPE_DATA;
-  line->snapshot_seq_nr = 0;
+  struct nvm_tgt_dev *dev = pblk->dev;
+  struct nvm_geo *geo = &dev->geo;
+  unsigned char *trans_map = pblk->trans_map;
+  int snapshot_seq_nr = line->snapshot_seq_nr;
+  int left_ppas = 0;
+  int entry_size = 8;
+  int total_snapshot_secs;
+  int left_ppas;
+  int line_secs;
+  int ret = 1;
+
+  if (pblk->addrf_len < 32)
+    entry_size = 4;
+
+  total_snapshot_secs = entry_size * pblk->rl.nr_secs / geo->csecs;
+
+  line_secs = line->sec_in_line;
+
+  left_ppas = line_secs;
+
+  trans_map =
+      ((void *)trans_map + (line_secs * (snapshot_seq_nr - 1) / geo->csecs));
+  if (pblk->nr_snapshot_lines == snapshot_seq_nr) {
+    left_ppas = total_snapshot_secs % line_secs;
+  }
+
+  return pblk_line_read_snapshot(pblk, line, left_ppas, trans_map);
 }
+
 static int pblk_recov_l2p_from_emeta(struct pblk *pblk,
                                      struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
@@ -872,6 +899,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
       goto out;
     if (line->type == PBLK_LINETYPE_LOG) {
       pblk_snapshot_line_add_ordered(&l_mg->snapshot_list, line);
+      l_mg->nr_snapshot_lines++;
     } else {
       pblk_recov_line_add_ordered(&recov_list, line);
       found_lines++;
@@ -896,10 +924,14 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   }
   do_gettimeofday(&str);
   printk("recover from snapshot start : [%lu]\n", (unsigned long)str.tv_sec);
+
   list_for_each_entry_safe(line, tline, &l_mg->snapshot_list, list) {
     printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
            line->id);
-    pblk_recov_l2p_from_snapshot(pblk, line);
+    if (pblk_recov_l2p_from_snapshot(pblk, line)) {
+      pr_err("l2p recover from snapshot error\n");
+      goto recov_from_emeta;
+    }
   }
 
   do_gettimeofday(&end);
@@ -909,6 +941,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   printk("diff : [%lu]\n", nETime - nSTime);
   do_gettimeofday(&str);
 
+recov_from_emeta:
   printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
   /* Verify closed blocks and recover this portion of L2P table*/
   list_for_each_entry_safe(line, tline, &recov_list, list) {
