@@ -1601,6 +1601,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
                  ret);
           goto out;
         }
+        new_line->left_msecs -= pblk->min_write_pgs;
         printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
                new_line->id, snapshot_mem, line_size);
       }
