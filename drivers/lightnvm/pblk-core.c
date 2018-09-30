@@ -1584,7 +1584,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
       if (new_line->sec_in_line != new_line->left_msecs) {
         prev_line = new_line;
         new_line = pblk_line_replace_snapshot_data(pblk, i + 1);
-        pblk_line_close_meta(pblk, prev_line);
+        // pblk_line_close_meta(pblk, prev_line);
         goto retry;
       }
       // fail
