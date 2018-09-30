@@ -842,7 +842,6 @@ static int pblk_line_submit_smeta_io(struct pblk *pblk, struct pblk_line *line,
   struct nvm_tgt_dev *dev = pblk->dev;
   struct pblk_line_meta *lm = &pblk->lm;
   struct bio *bio;
-  struct line_smeta *smeta_buf = (struct line_smeta *)line->smeta;
   struct nvm_rq rqd;
   __le64 *lba_list = NULL;
   int i, ret;
@@ -944,7 +943,7 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
 }
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
                             int left_ppas, unsigned char *trans_map) {
-  struct pblk_line_lm *lm = &pblk->lm;
+  struct pblk_line_meta *lm = &pblk->lm;
   u64 start = pblk_line_smeta_start(pblk, line) + pblk->lm.smeta_sec;
 
   printk("pblk_line_read_snapshot: start = %lu\n", (unsigned long)start);

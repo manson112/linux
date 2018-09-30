@@ -38,9 +38,7 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
   int left_ppas = 0;
   int entry_size = 8;
   int total_snapshot_secs;
-  int left_ppas;
   int line_secs;
-  int ret = 1;
 
   if (pblk->addrf_len < 32)
     entry_size = 4;
