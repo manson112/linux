@@ -1667,7 +1667,6 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   struct pblk_line *line, *tline;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   struct pblk_line *prev_line = new_line;
-  int open_line_id = new_line->id;
   int entry_size = 8;
   int i;
   unsigned char *state_bitmap;
@@ -1686,7 +1685,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
       } else if (tline->state == PBLK_LINESTATE_OPEN) {
         state_bitmap[i] = '1';
       } else {
-        state_bitmap[i] = '2;'
+        state_bitmap[i] = '2';
       }
     }
   }
@@ -1768,14 +1767,14 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
         snapshot_mem = 0;
         pblk_wait_for_snapshot(pblk);
       }
-      if (l_mg->snapshot_seq_nr == line->snapshot_seq_nr) {
+      if (l_mg->nr_snapshot_lines == line->snapshot_seq_nr) {
         new_line = line;
       }
     }
   }
 
   printk("start save line state\n");
-  snapshot_mam = 0;
+  snapshot_mem = 0;
   line_size = l_mg->nr_lines;
   while (snapshot_mem < line_size) {
     int ret = 0;

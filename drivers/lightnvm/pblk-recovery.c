@@ -931,38 +931,38 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
       goto recov_from_emeta;
     }
   }
-  list_for_each_entry_safe(line, tline, &recov_list, list) {
-    recovered_lines++;
+  // list_for_each_entry_safe(line, tline, &recov_list, list) {
+  //   recovered_lines++;
 
-    line->emeta_ssec = pblk_line_emeta_start(pblk, line);
+  //   line->emeta_ssec = pblk_line_emeta_start(pblk, line);
 
-    if (pblk_line_is_full(line)) {
-      struct list_head *move_list;
+  //   if (pblk_line_is_full(line)) {
+  //     struct list_head *move_list;
 
-      spin_lock(&line->lock);
-      line->state = PBLK_LINESTATE_CLOSED;
-      move_list = pblk_line_gc_list(pblk, line);
-      spin_unlock(&line->lock);
+  //     spin_lock(&line->lock);
+  //     line->state = PBLK_LINESTATE_CLOSED;
+  //     move_list = pblk_line_gc_list(pblk, line);
+  //     spin_unlock(&line->lock);
 
-      spin_lock(&l_mg->gc_lock);
-      list_move_tail(&line->list, move_list);
-      spin_unlock(&l_mg->gc_lock);
+  //     spin_lock(&l_mg->gc_lock);
+  //     list_move_tail(&line->list, move_list);
+  //     spin_unlock(&l_mg->gc_lock);
 
-      kfree(line->map_bitmap);
-      line->map_bitmap = NULL;
-      line->smeta = NULL;
-      line->emeta = NULL;
-    } else {
-      if (open_lines > 1)
-        pr_err("pblk: failed to recover L2P\n");
+  //     kfree(line->map_bitmap);
+  //     line->map_bitmap = NULL;
+  //     line->smeta = NULL;
+  //     line->emeta = NULL;
+  //   } else {
+  //     if (open_lines > 1)
+  //       pr_err("pblk: failed to recover L2P\n");
 
-      open_lines++;
-      line->meta_line = meta_line;
-      data_line = line;
-    }
-  }
+  //     open_lines++;
+  //     line->meta_line = meta_line;
+  //     data_line = line;
+  //   }
+  // }
 
-  goto out;
+  // goto out;
 
   do_gettimeofday(&end);
   printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
