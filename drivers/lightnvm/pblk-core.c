@@ -1774,7 +1774,6 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   }
 
   printk("start save line state\n");
-  snapshot_mem = 0;
   line_size = l_mg->nr_lines;
   while (snapshot_mem < line_size) {
     int ret = 0;
