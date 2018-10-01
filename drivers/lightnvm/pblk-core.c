@@ -1676,7 +1676,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
   state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
   for (i = 0; i < l_mg->nr_lines; i++) {
-    tline = pblk->lines[i];
+    line = pblk->lines[i];
     if (tline->type == PBLK_LINETYPE_LOG) {
       state_bitmap[i] = '4';
     } else {
