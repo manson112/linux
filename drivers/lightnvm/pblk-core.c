@@ -1667,11 +1667,30 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   struct pblk_line *line, *tline;
   struct pblk_line *new_line = pblk_line_get_data(pblk);
   struct pblk_line *prev_line = new_line;
+  int open_line_id = new_line->id;
   int entry_size = 8;
   int i;
+  unsigned char *state_bitmap;
   unsigned long nr_lines, line_size;
   unsigned long snapshot_mem = 0;
   size_t map_size;
+
+  state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
+  for (i = 0; i < l_mg->nr_lines; i++) {
+    tline = pblk->lines[i];
+    if (tline->type == PBLK_LINETYPE_LOG) {
+      state_bitmap[i] = '4';
+    } else {
+      if (tline->state == PBLK_LINESTATE_CLOSED) {
+        state_bitmap[i] = '0';
+      } else if (tline->state == PBLK_LINESTATE_OPEN) {
+        state_bitmap[i] = '1';
+      } else {
+        state_bitmap[i] = '2;'
+      }
+    }
+  }
+  tline = NULL;
 
   if (pblk->addrf_len < 32) {
     entry_size = 4;
@@ -1749,8 +1768,29 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
         snapshot_mem = 0;
         pblk_wait_for_snapshot(pblk);
       }
+      if (l_mg->snapshot_seq_nr == line->snapshot_seq_nr) {
+        new_line = line;
+      }
     }
   }
+
+  printk("start save line state\n");
+  snapshot_mam = 0;
+  line_size = l_mg->nr_lines;
+  while (snapshot_mem < line_size) {
+    int ret = 0;
+    ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, line_size);
+    if (ret) {
+      pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
+             ret);
+      goto out;
+    }
+    new_line->left_msecs -= pblk->min_write_pgs;
+    printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+           new_line->id, snapshot_mem, line_size);
+  }
+  pblk_wait_for_snapshot(pblk);
+
 out:
   return;
 }
