@@ -62,7 +62,7 @@ static int pblk_recov_line_state(struct pblk *pblk, struct pblk_line *line,
                                  unsigned char *line_state_bitmap) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
-  struct pblk_line_mgmt l_mg = &pblk->l_mg;
+  struct pblk_line_mgmt *l_mg = &pblk->l_mg;
   int nr_lines = l_mg->nr_lines;
   int left_ppas = (unsigned int)nr_lines / (unsigned int)geo->csecs + 1;
   return pblk_line_read_state(pblk, line, left_ppas, start_sec,
@@ -944,7 +944,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     }
     if (line->snapshot_seq_nr == l_mg->nr_snapshot_lines) {
       line_state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
-      if (pblk_recov_line_state(pblk, line, line->cur, line_state_bitmap)) {
+      if (pblk_recov_line_state(pblk, line, line->cur_sec, line_state_bitmap)) {
         pr_err("l2p recover from snapshot error2\n");
         goto recov_from_emeta;
       }
