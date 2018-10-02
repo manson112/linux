@@ -993,7 +993,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   }
   spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
-  printk("trans : %llu\n", ppa.ppa);
+  printk("trans : pu=%llu chk=%llu sec=%llu \n", ppa.m.pu, ppa.m.chk,
+         ppa.m.sec);
   spin_unlock(&pblk->trans_lock);
 recov_from_emeta:
   do_gettimeofday(&str);
