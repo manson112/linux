@@ -985,7 +985,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     printk("diff : [%lu]\n", nETime - nSTime);
     goto out;
   }
-  printk("no snapshot\n", (unsigned long)end.tv_sec);
+  printk("no snapshot\n");
 
 recov_from_emeta:
   do_gettimeofday(&str);
