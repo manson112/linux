@@ -1635,7 +1635,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   int entry_size = 8;
   int i;
   unsigned char *state_bitmap;
-  unsigned long nr_lines, line_size;
+  unsigned long nr_lines, line_size = 0;
   unsigned long snapshot_mem = 0;
   unsigned long bitmap_start = 0;
   size_t map_size;
