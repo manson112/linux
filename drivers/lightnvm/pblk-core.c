@@ -748,7 +748,7 @@ next_rq:
   rqd.ppa_list = rqd.meta_list + pblk_dma_meta_size;
   rqd.dma_ppa_list = rqd.dma_meta_list + pblk_dma_meta_size;
 
-  rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
+  rq_ppas = pblk_calc_secs(pblk, left_ppas, pblk->min_write_pgs - left_ppas);
   rq_len = rq_ppas * geo->csecs;
 
   bio = bio_map_kern(dev->q, trans_map, rq_len, GFP_KERNEL);
@@ -783,6 +783,7 @@ next_rq:
   trans_map += rq_len;
   left_ppas -= rq_ppas;
   line->cur_sec += rq_ppas;
+  printk("line read snapshot: cur_sec = %u\n", line->cur_sec);
   if (left_ppas)
     goto next_rq;
 free_ppa_list:

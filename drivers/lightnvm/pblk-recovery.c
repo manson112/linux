@@ -51,9 +51,6 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
 
   trans_map =
       ((void *)trans_map) + (line_secs * (snapshot_seq_nr - 1) * geo->csecs);
-  if (pblk->l_mg.nr_snapshot_lines == snapshot_seq_nr) {
-    left_ppas = total_snapshot_secs % line_secs;
-  }
 
   return pblk_line_read_snapshot(pblk, line, left_ppas, trans_map);
 }
@@ -65,6 +62,11 @@ static int pblk_recov_line_state(struct pblk *pblk, struct pblk_line *line,
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
   int nr_lines = l_mg->nr_lines;
   int left_ppas = (unsigned int)nr_lines / (unsigned int)geo->csecs + 1;
+
+  if (pblk->min_write_pgs > left_ppas) {
+    left_ppas = pblk->min_write_pgs;
+  }
+
   return pblk_line_read_state(pblk, line, left_ppas, start_sec,
                               line_state_bitmap);
 }
@@ -974,38 +976,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
       }
     }
   }
-  // list_for_each_entry_safe(line, tline, &recov_list, list) {
-  //   recovered_lines++;
-
-  //   line->emeta_ssec = pblk_line_emeta_start(pblk, line);
-
-  //   if (pblk_line_is_full(line)) {
-  //     struct list_head *move_list;
-
-  //     spin_lock(&line->lock);
-  //     line->state = PBLK_LINESTATE_CLOSED;
-  //     move_list = pblk_line_gc_list(pblk, line);
-  //     spin_unlock(&line->lock);
-
-  //     spin_lock(&l_mg->gc_lock);
-  //     list_move_tail(&line->list, move_list);
-  //     spin_unlock(&l_mg->gc_lock);
-
-  //     kfree(line->map_bitmap);
-  //     line->map_bitmap = NULL;
-  //     line->smeta = NULL;
-  //     line->emeta = NULL;
-  //   } else {
-  //     if (open_lines > 1)
-  //       pr_err("pblk: failed to recover L2P\n");
-
-  //     open_lines++;
-  //     line->meta_line = meta_line;
-  //     data_line = line;
-  //   }
-  // }
-
-  // goto out;
+  goto out;
 
   do_gettimeofday(&end);
   printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
