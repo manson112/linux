@@ -1742,17 +1742,17 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   }
 
   printk("start save line state\n");
-  line_size += l_mg->nr_lines;
+  line_size += l_mg->nr_lines * sizeof(unsigned char);
   while (bitmap_start < line_size) {
     int ret = 0;
     ret = pblk_submit_snapshot_io(pblk, new_line, &bitmap_start, line_size);
     if (ret) {
-      pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
-             ret);
+      pr_err("pblk: submit snapshot bitmap line to %d failed (%d)\n",
+             new_line->id, ret);
       goto out;
     }
     new_line->left_msecs -= pblk->min_write_pgs;
-    printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+    printk("pblk_start_snapshot: snapshot bitmap saved line[%d] %lu / %lu \n",
            new_line->id, bitmap_start, line_size);
   }
   pblk_wait_for_snapshot(pblk);
