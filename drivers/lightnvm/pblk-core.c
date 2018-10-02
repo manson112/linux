@@ -1742,6 +1742,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   }
 
   printk("start save line state\n");
+  line_size = bitmap_start;
   line_size += l_mg->nr_lines * sizeof(unsigned char);
   while (bitmap_start < line_size) {
     int ret = 0;
