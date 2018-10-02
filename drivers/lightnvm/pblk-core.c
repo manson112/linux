@@ -1647,6 +1647,9 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   unsigned long snapshot_mem = 0;
   unsigned long bitmap_start = 0;
   size_t map_size;
+  printk("%c %c %c %c %c %c %c %c\n", pblk->trans_map[0], pblk->trans_map[1],
+         pblk->trans_map[2], pblk->trans_map[3], pblk->trans_map[4],
+         pblk->trans_map[5], pblk->trans_map[6], pblk->trans_map[7]);
 
   state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
   for (i = 0; i < l_mg->nr_lines; i++) {
