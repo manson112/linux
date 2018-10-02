@@ -836,7 +836,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   unsigned long nETime;
   struct timeval str, end;
   struct ppa_addr ppa;
-  sector_t test = 1;
+  sector_t test = 2;
   LIST_HEAD(recov_list);
   LIST_HEAD(snapshot_list);
 
