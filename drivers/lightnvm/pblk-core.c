@@ -2337,8 +2337,7 @@ void pblk_update_map(struct pblk *pblk, sector_t lba, struct ppa_addr ppa) {
   if (!pblk_addr_in_cache(ppa_l2p) && !pblk_ppa_empty(ppa_l2p))
     pblk_map_invalidate(pblk, ppa_l2p);
 
-  printk("update map: lba=%llu ppa= %llu/%llu/%llu\n", (unsigned long)lba,
-         ppa.m.pu, ppa.m.chk, ppa.m.sec);
+  printk("update map: lba=%llu ppa= %llu\n", (unsigned long)lba, ppa.ppa);
   pblk_trans_map_set(pblk, lba, ppa);
   spin_unlock(&pblk->trans_lock);
 }
