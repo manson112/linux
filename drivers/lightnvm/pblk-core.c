@@ -1649,10 +1649,10 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   size_t map_size;
   sector_t test = 2;
   struct ppa_addr ppa;
-
+  spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
   printk("trans : %llu\n", ppa.ppa);
-
+  spin_unlock(&pblk->trans_lock);
   state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
   for (i = 0; i < l_mg->nr_lines; i++) {
     tline = &pblk->lines[i];

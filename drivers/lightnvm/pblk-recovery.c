@@ -991,8 +991,10 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     // }
     // printk("no snapshot\n");
   }
+  spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
   printk("trans : %llu\n", ppa.ppa);
+  spin_unlock(&pblk->trans_lock);
 recov_from_emeta:
   do_gettimeofday(&str);
   printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
