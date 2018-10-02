@@ -835,6 +835,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   unsigned long nSTime;
   unsigned long nETime;
   struct timeval str, end;
+  struct ppa_addr ppa;
+  sector_t test = 1;
   LIST_HEAD(recov_list);
   LIST_HEAD(snapshot_list);
 
@@ -989,9 +991,8 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     // }
     // printk("no snapshot\n");
   }
-  printk("%c %c %c %c %c %c %c %c\n", pblk->trans_map[0], pblk->trans_map[1],
-         pblk->trans_map[2], pblk->trans_map[3], pblk->trans_map[4],
-         pblk->trans_map[5], pblk->trans_map[6], pblk->trans_map[7]);
+  ppa = pblk_trans_map_get(pblk, test);
+  printk("trans : %llu\n", ppa.ppa);
 recov_from_emeta:
   do_gettimeofday(&str);
   printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
