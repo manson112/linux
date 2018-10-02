@@ -773,7 +773,7 @@ next_rq:
   if (ret) {
     pr_err("pblk: snapshot I/O submission failed: %d\n", ret);
     bio_put(bio);
-    goto free_rqd_dma;
+    goto free_ppa_list;
   }
 
   atomic_dec(&pblk->inflight_io);
