@@ -445,10 +445,79 @@ fail_free_rqd:
   pblk_free_rqd(pblk, rqd, PBLK_WRITE_INT);
   return ret;
 }
+int pblk_submit_line_state_io(struct pblk *pblk,
+                              struct pblk_line *snapshot_line,
+                              unsigned long *snapshot_mem,
+                              unsigned char *state) {
+  struct nvm_tgt_dev *dev = pblk->dev;
+  struct nvm_geo *geo = &dev->geo;
+  struct pblk_line_mgmt *l_mg = &pblk->l_mg;
+  struct pblk_g_ctx *s_ctx;
+  struct bio *bio;
+  struct nvm_rq *rqd;
+  void *data;
+  u64 paddr;
+  int rq_ppas = pblk->min_write_pgs;
+  int rq_len;
+  int i, j;
+  int ret;
+  rqd = pblk_alloc_rqd(pblk, PBLK_WRITE_INT);
 
+  s_ctx = nvm_rq_to_pdu(rqd);
+  s_ctx->private = snapshot_line;
+
+  rq_len = rq_ppas * geo->csecs;
+  data = ((void *)state);
+
+  bio = pblk_bio_map_addr(pblk, data, rq_ppas, rq_len, PBLK_KMALLOC_META,
+                          GFP_KERNEL);
+  if (IS_ERR(bio)) {
+    pr_err("pblk: failed to map snapshot io");
+    ret = PTR_ERR(bio);
+    goto fail_free_rqd;
+  }
+  bio->bi_iter.bi_sector = 0; /* internal bio */
+  bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+  rqd->bio = bio;
+
+  ret = pblk_alloc_w_rq(pblk, rqd, rq_ppas, pblk_end_io_write_snapshot);
+  if (ret)
+    goto fail_free_bio;
+
+  for (i = 0; i < rqd->nr_ppas;) {
+    spin_lock(&snapshot_line->lock);
+    paddr = __pblk_alloc_page(pblk, snapshot_line, rq_ppas);
+    spin_unlock(&snapshot_line->lock);
+    for (j = 0; j < rq_ppas; j++, i++, paddr++)
+      rqd->ppa_list[i] = addr_to_gen_ppa(pblk, paddr, id);
+  }
+
+  *snapshot_mem += rq_len;
+
+  pblk_down_page(pblk, rqd->ppa_list, rqd->nr_ppas);
+
+  ret = pblk_submit_io(pblk, rqd);
+  if (ret) {
+    pr_err("pblk: snapshot I/O submission failed: %d\n", ret);
+    goto fail_rollback;
+  }
+
+  return NVM_IO_OK;
+
+fail_rollback:
+  pblk_up_page(pblk, rqd->ppa_list, rqd->nr_ppas);
+  spin_lock(&l_mg->close_lock);
+  pblk_dealloc_page(pblk, snapshot_line, rq_ppas);
+  list_add(&snapshot_line->list, &snapshot_line->list);
+  spin_unlock(&l_mg->close_lock);
+fail_free_bio:
+  bio_put(bio);
+fail_free_rqd:
+  pblk_free_rqd(pblk, rqd, PBLK_WRITE_INT);
+  return ret;
+}
 int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
-                            unsigned long *snapshot_mem,
-                            unsigned long line_size) {
+                            unsigned long *snapshot_mem) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
@@ -459,7 +528,6 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   void *data;
   u64 paddr;
   int rq_ppas = pblk->min_write_pgs;
-  int id = snapshot_line->id;
   int rq_len;
   int i, j;
   int ret;
@@ -496,12 +564,6 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   }
 
   *snapshot_mem += rq_len;
-
-  // if (*snapshot_mem >= line_size) {
-  //   spin_lock(&l_mg->close_lock);
-  //   list_del(&snapshot_line->list);
-  //   spin_unlock(&l_mg->close_lock);
-  // }
 
   pblk_down_page(pblk, rqd->ppa_list, rqd->nr_ppas);
 

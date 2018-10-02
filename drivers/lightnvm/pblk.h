@@ -772,7 +772,11 @@ int pblk_submit_io(struct pblk *pblk, struct nvm_rq *rqd);
 int pblk_submit_io_sync(struct pblk *pblk, struct nvm_rq *rqd);
 int pblk_submit_meta_io(struct pblk *pblk, struct pblk_line *meta_line);
 int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
-                            unsigned long *snapshot_mem, size_t map_size);
+                            unsigned long *snapshot_mem);
+int pblk_submit_line_state_io(struct pblk *pblk,
+                              struct pblk_line *snapshot_line,
+                              unsigned long *snapshot_mem,
+                              unsigned char *state);
 struct bio *pblk_bio_map_addr(struct pblk *pblk, void *data,
                               unsigned int nr_secs, unsigned int len,
                               int alloc_type, gfp_t gfp_mask);
@@ -839,6 +843,9 @@ int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
                              int snapshot_seq_nr);
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
                             int left_ppas, unsigned char *trans_map);
+int pblk_line_read_state(struct pblk *pblk, struct pblk_line *line,
+                         int left_ppas, u64 start_sec,
+                         unsigned char *line_state_bitmap);
 /*
  * pblk user I/O write path
  */

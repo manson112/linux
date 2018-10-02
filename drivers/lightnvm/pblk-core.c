@@ -728,7 +728,6 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
   struct nvm_geo *geo = &dev->geo;
   struct bio *bio;
   struct nvm_rq rqd;
-  int min = pblk->min_write_pgs;
   int rq_ppas, rq_len;
   int cmd_op, bio_op;
   int i;
@@ -783,6 +782,7 @@ next_rq:
   }
   trans_map += rq_len;
   left_ppas -= rq_ppas;
+  line->cur += rq_ppas;
   if (left_ppas)
     goto next_rq;
 free_ppa_list:
@@ -912,9 +912,16 @@ int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
                             int left_ppas, unsigned char *trans_map) {
   struct pblk_line_meta *lm = &pblk->lm;
   u64 start = pblk_line_smeta_start(pblk, line) + pblk->lm.smeta_sec;
-
-  printk("pblk_line_read_snapshot: start = %lu\n", (unsigned long)start);
+  line->cur = start;
   return pblk_line_read_snapshot_io(pblk, line, start, left_ppas, trans_map);
+}
+int pblk_line_read_state(struct pblk *pblk, struct pblk_line *line,
+                         int left_ppas, u64 start_sec,
+                         unsigned char *line_state_bitmap) {
+  u64 start = start_sec;
+  printk("pblk_line_read_bitmap_state: start = %lu\n", (unsigned long)start);
+  return pblk_line_read_snapshot_io(pblk, line, start, left_ppas,
+                                    line_state_bitmap);
 }
 static void pblk_setup_e_rq(struct pblk *pblk, struct nvm_rq *rqd,
                             struct ppa_addr ppa) {
@@ -1683,7 +1690,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
       while (snapshot_mem < line_size) {
         int ret = 0;
-        ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem, line_size);
+        ret = pblk_submit_snapshot_io(pblk, new_line, &snapshot_mem);
         if (ret) {
           pr_err("pblk: submit snapshot line to %d failed (%d)\n", new_line->id,
                  ret);
@@ -1721,7 +1728,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
 
         while (snapshot_mem < line_size) {
           int ret = 0;
-          ret = pblk_submit_snapshot_io(pblk, line, &snapshot_mem, line_size);
+          ret = pblk_submit_snapshot_io(pblk, line, &snapshot_mem);
           if (ret) {
             pr_err("pblk: submit snapshot line to %d failed (%d)\n",
                    new_line->id, ret);
@@ -1746,7 +1753,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   line_size += l_mg->nr_lines * sizeof(unsigned char);
   while (bitmap_start < line_size) {
     int ret = 0;
-    ret = pblk_submit_snapshot_io(pblk, new_line, &bitmap_start, line_size);
+    ret =
+        pblk_submit_line_state_io(pblk, new_line, &bitmap_start, state_bitmap);
     if (ret) {
       pr_err("pblk: submit snapshot bitmap line to %d failed (%d)\n",
              new_line->id, ret);

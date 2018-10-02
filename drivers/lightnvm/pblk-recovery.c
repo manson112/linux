@@ -57,7 +57,17 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
 
   return pblk_line_read_snapshot(pblk, line, left_ppas, trans_map);
 }
-
+static int pblk_recov_line_state(struct pblk *pblk, struct pblk_line *line,
+                                 u64 start_sec,
+                                 unsigned char *line_state_bitmap) {
+  struct nvm_tgt_dev *dev = pblk->dev;
+  struct nvm_geo *geo = &dev->geo;
+  struct pblk_line_mgmt l_mg = &pblk->l_mg;
+  int nr_lines = l_mg->nr_lines;
+  int left_ppas = (unsigned int)nr_lines / (unsigned int)geo->csecs + 1;
+  return pblk_line_read_state(pblk, line, left_ppas, start_sec,
+                              line_state_bitmap);
+}
 static int pblk_recov_l2p_from_emeta(struct pblk *pblk,
                                      struct pblk_line *line) {
   struct nvm_tgt_dev *dev = pblk->dev;
@@ -810,14 +820,16 @@ static int pblk_line_was_written(struct pblk_line *line,
 struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   struct pblk_line_meta *lm = &pblk->lm;
   struct pblk_line_mgmt *l_mg = &pblk->l_mg;
-  struct pblk_line *line, *tline, *data_line = NULL;
+  struct pblk_line *line, *tline, *temp_line, *data_line = NULL;
   struct pblk_smeta *smeta;
   struct pblk_emeta *emeta;
   struct line_smeta *smeta_buf;
+  struct list_head *moved_list;
   int found_lines = 0, recovered_lines = 0, open_lines = 0;
   int is_next = 0;
   int meta_line;
   int i, valid_uuid = 0;
+  unsigned char *line_state_bitmap;
   unsigned long nSTime;
   unsigned long nETime;
   struct timeval str, end;
@@ -927,8 +939,39 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
     printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
            line->id);
     if (pblk_recov_l2p_from_snapshot(pblk, line)) {
-      pr_err("l2p recover from snapshot error\n");
+      pr_err("l2p recover from snapshot error1\n");
       goto recov_from_emeta;
+    }
+    if (line->snapshot_seq_nr == l_mg->nr_snapshot_lines) {
+      line_state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
+      if (pblk_recov_line_state(pblk, line, line->cur, line_state_bitmap)) {
+        pr_err("l2p recover from snapshot error2\n");
+        goto recov_from_emeta;
+      }
+      for (i = 0; i < l_mg->nr_lines; i++) {
+        temp_line = &pblk->lines[i];
+        printk("%c\n", line_state_bitmap[i]);
+        if (line_state_bitmap[i] == '0') {
+          // close
+          spin_lock(&temp_line->lock);
+          temp_line->state = PBLK_LINESTATE_CLOSED;
+          moved_list = pblk_line_gc_list(pblk, temp_line);
+          spin_unlock(&temp_line->lock);
+
+        } else if (line_state_bitmap[i] == '1') {
+          // open
+          if (open_lines > 1)
+            pr_err("pblk: failed to recover L2P\n");
+          open_lines++;
+          line->meta_line = meta_line;
+          data_line = line;
+        } else if (line_state_bitmap[i] == '2') {
+          // else
+
+        } else if (line_state_bitmap[i] == '4') {
+          // log
+        }
+      }
     }
   }
   // list_for_each_entry_safe(line, tline, &recov_list, list) {
