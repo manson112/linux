@@ -457,6 +457,7 @@ int pblk_submit_line_state_io(struct pblk *pblk,
   struct nvm_rq *rqd;
   void *data;
   u64 paddr;
+  int id = snapshot_line->id;
   int rq_ppas = pblk->min_write_pgs;
   int rq_len;
   int i, j;
@@ -527,6 +528,7 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   unsigned char *trans_map = pblk->trans_map;
   void *data;
   u64 paddr;
+  int id = snapshot_line->id;
   int rq_ppas = pblk->min_write_pgs;
   int rq_len;
   int i, j;

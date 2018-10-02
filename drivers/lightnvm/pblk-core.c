@@ -782,7 +782,7 @@ next_rq:
   }
   trans_map += rq_len;
   left_ppas -= rq_ppas;
-  line->cur += rq_ppas;
+  line->cur_sec += rq_ppas;
   if (left_ppas)
     goto next_rq;
 free_ppa_list:
@@ -911,8 +911,8 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
                             int left_ppas, unsigned char *trans_map) {
   struct pblk_line_meta *lm = &pblk->lm;
-  u64 start = pblk_line_smeta_start(pblk, line) + pblk->lm.smeta_sec;
-  line->cur = start;
+  u64 start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
+  line->cur_sec = start;
   return pblk_line_read_snapshot_io(pblk, line, start, left_ppas, trans_map);
 }
 int pblk_line_read_state(struct pblk *pblk, struct pblk_line *line,
