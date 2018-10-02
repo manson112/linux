@@ -959,7 +959,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
           temp_line->state = PBLK_LINESTATE_CLOSED;
           moved_list = pblk_line_gc_list(pblk, temp_line);
           spin_unlock(&temp_line->lock);
-
+          recovered_lines++;
         } else if (line_state_bitmap[i] == '1') {
           // open
           if (open_lines > 1)
@@ -967,25 +967,28 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
           open_lines++;
           line->meta_line = meta_line;
           data_line = line;
+          recovered_lines++;
         } else if (line_state_bitmap[i] == '2') {
           // else
-
+          recovered_lines++;
         } else if (line_state_bitmap[i] == '4') {
           // log
         }
       }
     }
   }
-  goto out;
-
-  do_gettimeofday(&end);
-  printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
-  nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
-  nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
-  printk("diff : [%lu]\n", nETime - nSTime);
-  do_gettimeofday(&str);
+  if (recovered_lines == found_lines) {
+    do_gettimeofday(&end);
+    printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
+    nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+    nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+    printk("diff : [%lu]\n", nETime - nSTime);
+    goto out;
+  }
+  printk("no snapshot\n", (unsigned long)end.tv_sec);
 
 recov_from_emeta:
+  do_gettimeofday(&str);
   printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
   /* Verify closed blocks and recover this portion of L2P table*/
   list_for_each_entry_safe(line, tline, &recov_list, list) {
