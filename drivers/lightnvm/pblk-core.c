@@ -725,25 +725,20 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
                                       u64 paddr, int left_ppas,
                                       unsigned char *trans_map) {
   struct nvm_tgt_dev *dev = pblk->dev;
-  struct pblk_line_meta *lm = &pblk->lm;
   struct nvm_geo *geo = &dev->geo;
   struct bio *bio;
   struct nvm_rq rqd;
-  dma_addr_t dma_ppa_list, dma_meta_list;
   int min = pblk->min_write_pgs;
-  int id = line->id;
   int rq_ppas, rq_len;
   int cmd_op, bio_op;
-  int i, j;
+  int i;
   int ret;
+  int flags;
 
   bio_op = REQ_OP_READ;
   cmd_op = NVM_OP_PREAD;
   flags = pblk_set_read_mode(pblk, PBLK_READ_SEQUENTIAL);
 
-  meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL, &dma_meta_list);
-  if (!meta_list)
-    return -ENOMEM;
 next_rq:
   memset(&rqd, 0, sizeof(struct nvm_rq));
   rqd.meta_list =
@@ -757,7 +752,7 @@ next_rq:
   rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
   rq_len = rq_ppas * geo->csecs;
 
-  bio = bio_map_kern(dev->q, trans_map, , GFP_KERNEL);
+  bio = bio_map_kern(dev->q, trans_map, rq_len, GFP_KERNEL);
   if (IS_ERR(bio)) {
     ret = PTR_ERR(bio);
     goto free_ppa_list;
@@ -771,7 +766,6 @@ next_rq:
   rqd.flags = flags;
   rqd.nr_ppas = rq_ppas;
   for (i = 0; i < rq_ppas; i++, paddr++) {
-    struct pblk_sec_meta *meta_list = rqd.meta_list;
     rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
   }
 
@@ -791,8 +785,9 @@ next_rq:
   left_ppas -= rq_ppas;
   if (left_ppas)
     goto next_rq;
-free_rqd_dma:
+free_ppa_list:
   nvm_dev_dma_free(dev->parent, rqd.meta_list, rqd.dma_meta_list);
+
   return ret;
 }
 u64 pblk_line_smeta_start(struct pblk *pblk, struct pblk_line *line) {
