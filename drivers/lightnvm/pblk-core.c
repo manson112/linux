@@ -725,8 +725,8 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
                                       u64 paddr, int left_ppas,
                                       unsigned char *trans_map) {
   struct nvm_tgt_dev *dev = pblk->dev;
+  struct pblk_line_meta *lm = &pblk->lm;
   struct nvm_geo *geo = &dev->geo;
-  void *ppa_list, *meta_list;
   struct bio *bio;
   struct nvm_rq rqd;
   dma_addr_t dma_ppa_list, dma_meta_list;
@@ -739,73 +739,45 @@ static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
 
   bio_op = REQ_OP_READ;
   cmd_op = NVM_OP_PREAD;
+  flags = pblk_set_read_mode(pblk, PBLK_READ_SEQUENTIAL);
 
   meta_list = nvm_dev_dma_alloc(dev->parent, GFP_KERNEL, &dma_meta_list);
   if (!meta_list)
     return -ENOMEM;
-
-  ppa_list = meta_list + pblk_dma_meta_size;
-  dma_ppa_list = dma_meta_list + pblk_dma_meta_size;
-
 next_rq:
   memset(&rqd, 0, sizeof(struct nvm_rq));
+  rqd.meta_list =
+      nvm_dev_dma_alloc(dev->parent, GFP_KERNEL, &rqd.dma_meta_list);
+  if (!rqd.meta_list)
+    return -ENOMEM;
+
+  rqd.ppa_list = rqd.meta_list + pblk_dma_meta_size;
+  rqd.dma_ppa_list = rqd.dma_meta_list + pblk_dma_meta_size;
 
   rq_ppas = pblk_calc_secs(pblk, left_ppas, 0);
   rq_len = rq_ppas * geo->csecs;
 
-  bio = pblk_bio_map_addr(pblk, trans_map, rq_ppas, rq_len, PBLK_VMALLOC_META,
-                          GFP_KERNEL);
+  bio = bio_map_kern(dev->q, trans_map, , GFP_KERNEL);
   if (IS_ERR(bio)) {
     ret = PTR_ERR(bio);
-    goto free_rqd_dma;
+    goto free_ppa_list;
   }
 
   bio->bi_iter.bi_sector = 0; /* internal bio */
   bio_set_op_attrs(bio, bio_op, 0);
 
   rqd.bio = bio;
-  rqd.meta_list = meta_list;
-  rqd.ppa_list = ppa_list;
-  rqd.dma_meta_list = dma_meta_list;
-  rqd.dma_ppa_list = dma_ppa_list;
   rqd.opcode = cmd_op;
+  rqd.flags = flags;
   rqd.nr_ppas = rq_ppas;
-
-  for (i = 0; i < rqd.nr_ppas;) {
-    struct ppa_addr ppa = addr_to_gen_ppa(pblk, paddr, id);
-    int pos = pblk_ppa_to_pos(geo, ppa);
-    int read_type = PBLK_READ_RANDOM;
-
-    if (pblk_io_aligned(pblk, rq_ppas))
-      read_type = PBLK_READ_SEQUENTIAL;
-    rqd.flags = pblk_set_read_mode(pblk, read_type);
-
-    while (test_bit(pos, line->blk_bitmap)) {
-      paddr += min;
-      if (pblk_boundary_paddr_checks(pblk, paddr)) {
-        pr_err("pblk: corrupt snapshot line:%d\n", line->id);
-        bio_put(bio);
-        ret = -EINTR;
-        goto free_rqd_dma;
-      }
-
-      ppa = addr_to_gen_ppa(pblk, paddr, id);
-      pos = pblk_ppa_to_pos(geo, ppa);
-    }
-
-    if (pblk_boundary_paddr_checks(pblk, paddr + min)) {
-      pr_err("pblk: corrupt snapshot line:%d\n", line->id);
-      bio_put(bio);
-      ret = -EINTR;
-      goto free_rqd_dma;
-    }
-
-    for (j = 0; j < min; j++, i++, paddr++)
-      rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
+  for (i = 0; i < rq_ppas; i++, paddr++) {
+    struct pblk_sec_meta *meta_list = rqd.meta_list;
+    rqd.ppa_list[i] = addr_to_gen_ppa(pblk, paddr, line->id);
   }
+
   ret = pblk_submit_io_sync(pblk, &rqd);
   if (ret) {
-    pr_err("pblk: emeta I/O submission failed: %d\n", ret);
+    pr_err("pblk: snapshot I/O submission failed: %d\n", ret);
     bio_put(bio);
     goto free_rqd_dma;
   }
