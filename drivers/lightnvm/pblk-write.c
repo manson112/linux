@@ -542,7 +542,7 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   rq_len = rq_ppas * geo->csecs;
   data = ((void *)trans_map) + *snapshot_mem;
 
-  bio = pblk_bio_map_addr(pblk, data, rq_ppas, rq_len, PBLK_VMALLOC_META,
+  bio = pblk_bio_map_addr(pblk, data, rq_ppas, rq_len, PBLK_KMALLOC_META,
                           GFP_KERNEL);
   if (IS_ERR(bio)) {
     pr_err("pblk: failed to map snapshot io");
