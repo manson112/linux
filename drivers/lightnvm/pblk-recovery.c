@@ -1031,8 +1031,8 @@ recov_from_emeta:
     if (pblk_recov_l2p_from_emeta(pblk, line))
       pblk_recov_l2p_from_oob(pblk, line);
     if (recovered_lines % 50 == 0) {
-      printk("recover L2P by scan recovery %.2f% complete\n",
-             (float)recovered_lines / (float)l_mg->nr_lines * 100);
+      printk("recover L2P by scan recovery %d% complete\n",
+             recovered_lines * 100 / l_mg->nr_lines);
     }
   next:
     if (pblk_line_is_full(line)) {
