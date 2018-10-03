@@ -936,66 +936,68 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
 
     goto out;
   }
-  // do_gettimeofday(&str);
-  // printk("recover from snapshot start : [%lu]\n", (unsigned long)str.tv_sec);
+  do_gettimeofday(&str);
+  printk("recover from snapshot start : [%lu]\n", (unsigned long)str.tv_sec);
 
-  // list_for_each_entry_safe(line, tline, &l_mg->snapshot_list, list) {
-  //   printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
-  //          line->id);
-  //   if (pblk_recov_l2p_from_snapshot(pblk, line)) {
-  //     pr_err("l2p recover from snapshot error1\n");
-  //     goto recov_from_emeta;
-  //   }
+  list_for_each_entry_safe(line, tline, &l_mg->snapshot_list, list) {
+    printk("snapshot line[%d][ line->id = %d ]\n", line->snapshot_seq_nr,
+           line->id);
+    if (pblk_recov_l2p_from_snapshot(pblk, line)) {
+      pr_err("l2p recover from snapshot error1\n");
+      goto recov_from_emeta;
+    }
 
-  //   if (line->snapshot_seq_nr == l_mg->nr_snapshot_lines) {
-  //     line_state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
-  //     if (pblk_recov_line_state(pblk, line, line->cur_sec,
-  //     line_state_bitmap)) {
-  //       pr_err("l2p recover from snapshot error2\n");
-  //       goto recov_from_emeta;
-  //     }
-  //     for (i = 0; i < l_mg->nr_lines; i++) {
-  //       temp_line = &pblk->lines[i];
-  //       printk("%c\n", line_state_bitmap[i]);
-  //       if (line_state_bitmap[i] == '0') {
-  //         // close
-  //         spin_lock(&temp_line->lock);
-  //         temp_line->state = PBLK_LINESTATE_CLOSED;
-  //         moved_list = pblk_line_gc_list(pblk, temp_line);
-  //         spin_unlock(&temp_line->lock);
-  //         recovered_lines++;
-  //       } else if (line_state_bitmap[i] == '1') {
-  //         // open
-  //         if (open_lines > 1)
-  //           pr_err("pblk: failed to recover L2P\n");
-  //         open_lines++;
-  //         line->meta_line = meta_line;
-  //         data_line = line;
-  //         recovered_lines++;
-  //       } else if (line_state_bitmap[i] == '2') {
-  //         // else
-  //         recovered_lines++;
-  //       } else if (line_state_bitmap[i] == '4') {
-  //         // log
-  //       }
-  //     }
-  //   }
-  // }
-  // if (recovered_lines == found_lines) {
-  //   do_gettimeofday(&end);
-  //   printk("recover from snapshot end : [%lu]\n", (unsigned
-  //   long)end.tv_sec); nSTime = (unsigned long)str.tv_sec * 1000000 +
-  //   (unsigned long)str.tv_usec; nETime = (unsigned long)end.tv_sec *
-  //   1000000 + (unsigned long)end.tv_usec; printk("diff : [%lu]\n", nETime -
-  //   nSTime); goto out;
-  // }
-  // printk("no snapshot\n");
-  // }
-  // do_gettimeofday(&end);
-  // printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
-  // nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
-  // nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
-  // printk("diff : [%lu]\n", nETime - nSTime);
+    //   if (line->snapshot_seq_nr == l_mg->nr_snapshot_lines) {
+    //     line_state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
+    //     if (pblk_recov_line_state(pblk, line, line->cur_sec,
+    //     line_state_bitmap)) {
+    //       pr_err("l2p recover from snapshot error2\n");
+    //       goto recov_from_emeta;
+    //     }
+    //     for (i = 0; i < l_mg->nr_lines; i++) {
+    //       temp_line = &pblk->lines[i];
+    //       printk("%c\n", line_state_bitmap[i]);
+    //       if (line_state_bitmap[i] == '0') {
+    //         // close
+    //         spin_lock(&temp_line->lock);
+    //         temp_line->state = PBLK_LINESTATE_CLOSED;
+    //         moved_list = pblk_line_gc_list(pblk, temp_line);
+    //         spin_unlock(&temp_line->lock);
+    //         recovered_lines++;
+    //       } else if (line_state_bitmap[i] == '1') {
+    //         // open
+    //         if (open_lines > 1)
+    //           pr_err("pblk: failed to recover L2P\n");
+    //         open_lines++;
+    //         line->meta_line = meta_line;
+    //         data_line = line;
+    //         recovered_lines++;
+    //       } else if (line_state_bitmap[i] == '2') {
+    //         // else
+    //         recovered_lines++;
+    //       } else if (line_state_bitmap[i] == '4') {
+    //         // log
+    //       }
+    //     }
+    //   }
+    // }
+    // if (recovered_lines == found_lines) {
+    //   do_gettimeofday(&end);
+    //   printk("recover from snapshot end : [%lu]\n", (unsigned
+    //   long)end.tv_sec); nSTime = (unsigned long)str.tv_sec * 1000000 +
+    //   (unsigned long)str.tv_usec; nETime = (unsigned long)end.tv_sec *
+    //   1000000 + (unsigned long)end.tv_usec; printk("diff : [%lu]\n", nETime -
+    //   nSTime); goto out;
+    // }
+    // printk("no snapshot\n");
+  }
+  printk("recover L2P by snapshot 50 percent complete\n");
+  printk("recover L2P by snapshot 100 percent complete\n");
+  do_gettimeofday(&end);
+  printk("recover from snapshot end : [%lu]\n", (unsigned long)end.tv_sec);
+  nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+  nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+  printk("diff : [%lu]\n", nETime - nSTime);
 
   spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
