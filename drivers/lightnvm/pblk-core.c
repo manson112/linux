@@ -783,7 +783,7 @@ next_rq:
   trans_map += rq_len;
   left_ppas -= rq_ppas;
   line->cur_sec += rq_ppas;
-  printk("line read snapshot: cur_sec = %u\n", line->cur_sec);
+  // printk("line read snapshot: cur_sec = %u\n", line->cur_sec);
   if (left_ppas)
     goto next_rq;
 free_ppa_list:
