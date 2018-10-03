@@ -1651,8 +1651,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   struct ppa_addr ppa;
   spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
-  printk("trans : pu=%llu chk=%llu sec=%llu \n", ppa.m.pu, ppa.m.chk,
-         ppa.m.sec);
+  // printk("trans : pu=%llu chk=%llu sec=%llu \n", ppa.m.pu, ppa.m.chk,
+  //  ppa.m.sec);
   spin_unlock(&pblk->trans_lock);
   state_bitmap = kmalloc(l_mg->nr_lines, GFP_KERNEL);
   for (i = 0; i < l_mg->nr_lines; i++) {
@@ -1704,7 +1704,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
           goto out;
         }
         new_line->left_msecs -= pblk->min_write_pgs;
-        // printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+        // printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu
+        // \n",
         //  new_line->id, snapshot_mem, line_size);
       }
       line_size = (unsigned long)map_size - snapshot_mem;
@@ -1741,7 +1742,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
                    new_line->id, ret);
             goto out;
           }
-          printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+          printk("pblk_start_snapshot: snapshot saved line[%d] %lu / "
+                 "%lu \n",
                  line->id, snapshot_mem, line_size);
         }
         line_size = (unsigned long)map_size - snapshot_mem;
@@ -1768,7 +1770,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
       goto out;
     }
     new_line->left_msecs -= pblk->min_write_pgs;
-    printk("pblk_start_snapshot: snapshot bitmap saved line[%d] %lu / %lu \n",
+    printk("pblk_start_snapshot: snapshot bitmap saved line[%d] %lu / "
+           "%lu \n",
            new_line->id, bitmap_start, line_size);
   }
   pblk_wait_for_snapshot(pblk);
