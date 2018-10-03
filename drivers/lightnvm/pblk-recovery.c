@@ -34,6 +34,7 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   unsigned char *trans_map = pblk->trans_map;
+  void *data;
   int snapshot_seq_nr = line->snapshot_seq_nr;
   int left_ppas = 0;
   int entry_size = 8;
@@ -49,10 +50,9 @@ static int pblk_recov_l2p_from_snapshot(struct pblk *pblk,
 
   left_ppas = line_secs;
 
-  trans_map =
-      ((void *)trans_map) + (line_secs * (snapshot_seq_nr - 1) * geo->csecs);
+  data = ((void *)trans_map) + (line_secs * (snapshot_seq_nr - 1) * geo->csecs);
 
-  return pblk_line_read_snapshot(pblk, line, left_ppas, trans_map);
+  return pblk_line_read_snapshot(pblk, line, left_ppas, data);
 }
 static int pblk_recov_line_state(struct pblk *pblk, struct pblk_line *line,
                                  u64 start_sec,
