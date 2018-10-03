@@ -723,7 +723,7 @@ free_rqd_dma:
 }
 static int pblk_line_read_snapshot_io(struct pblk *pblk, struct pblk_line *line,
                                       u64 paddr, int left_ppas,
-                                      unsigned char *trans_map) {
+                                      void *trans_map) {
   struct nvm_tgt_dev *dev = pblk->dev;
   struct nvm_geo *geo = &dev->geo;
   struct bio *bio;
@@ -910,7 +910,7 @@ int pblk_line_read_emeta(struct pblk *pblk, struct pblk_line *line,
                                    PBLK_READ);
 }
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
-                            int left_ppas, unsigned char *trans_map) {
+                            int left_ppas, void *trans_map) {
   struct pblk_line_meta *lm = &pblk->lm;
   u64 start = pblk_line_smeta_start(pblk, line) + lm->smeta_sec;
   line->cur_sec = start;
