@@ -1647,7 +1647,7 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
   unsigned long snapshot_mem = 0;
   unsigned long bitmap_start = 0;
   size_t map_size;
-  sector_t test = 2;
+  sector_t test = 1304819;
   struct ppa_addr ppa;
   spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
