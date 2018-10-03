@@ -1006,7 +1006,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   spin_unlock(&pblk->trans_lock);
 recov_from_emeta:
   do_gettimeofday(&str);
-  printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
+  // printk("recover from emeta start : [%lu]\n", (unsigned long)str.tv_sec);
   /* Verify closed blocks and recover this portion of L2P table*/
   list_for_each_entry_safe(line, tline, &recov_list, list) {
     recovered_lines++;
@@ -1032,10 +1032,7 @@ recov_from_emeta:
 
     if (pblk_recov_l2p_from_emeta(pblk, line))
       pblk_recov_l2p_from_oob(pblk, line);
-    if (recovered_lines % 150 == 0) {
-      printk("recover L2P by scan recovery %d percent complete\n",
-             recovered_lines * 100 / l_mg->nr_lines);
-    }
+
   next:
     if (pblk_line_is_full(line)) {
       struct list_head *move_list;
@@ -1062,11 +1059,11 @@ recov_from_emeta:
       data_line = line;
     }
   }
-  do_gettimeofday(&end);
-  printk("recover from emeta end : [%lu]\n", (unsigned long)end.tv_sec);
-  nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
-  nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
-  printk("diff : [%lu]\n", nETime - nSTime);
+  // do_gettimeofday(&end);
+  // printk("recover from emeta end : [%lu]\n", (unsigned long)end.tv_sec);
+  // nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
+  // nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
+  // printk("diff : [%lu]\n", nETime - nSTime);
 
   spin_lock(&l_mg->free_lock);
   if (!open_lines) {
