@@ -995,7 +995,7 @@ struct pblk_line *pblk_recov_l2p(struct pblk *pblk) {
   nSTime = (unsigned long)str.tv_sec * 1000000 + (unsigned long)str.tv_usec;
   nETime = (unsigned long)end.tv_sec * 1000000 + (unsigned long)end.tv_usec;
   printk("diff : [%lu]\n", nETime - nSTime);
-  goto out;
+
   spin_lock(&pblk->trans_lock);
   ppa = pblk_trans_map_get(pblk, test);
   printk("trans : pu=%llu chk=%llu sec=%llu \n", ppa.m.pu, ppa.m.chk,
