@@ -842,7 +842,7 @@ struct pblk_line *pblk_line_replace_snapshot_data(struct pblk *pblk,
 int pblk_line_setup_snapshot(struct pblk *pblk, struct pblk_line *new,
                              int snapshot_seq_nr);
 int pblk_line_read_snapshot(struct pblk *pblk, struct pblk_line *line,
-                            int left_ppas, unsigned char *trans_map);
+                            int left_ppas, void *trans_map);
 int pblk_line_read_state(struct pblk *pblk, struct pblk_line *line,
                          int left_ppas, u64 start_sec,
                          unsigned char *line_state_bitmap);
