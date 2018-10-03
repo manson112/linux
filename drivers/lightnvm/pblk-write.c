@@ -560,7 +560,7 @@ int pblk_submit_snapshot_io(struct pblk *pblk, struct pblk_line *snapshot_line,
   for (i = 0; i < rqd->nr_ppas;) {
     spin_lock(&snapshot_line->lock);
     paddr = __pblk_alloc_page(pblk, snapshot_line, rq_ppas);
-    printk("snapshot_io: paddr=%lu", paddr);
+    // printk("snapshot_io: paddr=%lu", paddr);
     spin_unlock(&snapshot_line->lock);
     for (j = 0; j < rq_ppas; j++, i++, paddr++)
       rqd->ppa_list[i] = addr_to_gen_ppa(pblk, paddr, id);

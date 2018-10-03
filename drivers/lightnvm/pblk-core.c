@@ -1704,8 +1704,8 @@ static void __pblk_start_snapshot(struct pblk *pblk) {
           goto out;
         }
         new_line->left_msecs -= pblk->min_write_pgs;
-        printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
-               new_line->id, snapshot_mem, line_size);
+        // printk("pblk_start_snapshot: snapshot saved line[%d] %lu / %lu \n",
+        //  new_line->id, snapshot_mem, line_size);
       }
       line_size = (unsigned long)map_size - snapshot_mem;
       bitmap_start = snapshot_mem;
